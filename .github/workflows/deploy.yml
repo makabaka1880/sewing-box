@@ -55,9 +55,8 @@ jobs:
       - name: Build site
         run: pnpm --filter sewing-box run build
         env:
-          # Extract repo name from GITHUB_REPOSITORY (owner/repo) for
-          # correct asset paths when served from gh-pages.
-          BASE: /${{ github.event.repository.name }}/
+          # Custom domain serves from root; use / for asset paths.
+          BASE: /
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
