@@ -1,0 +1,86 @@
+/*
+Created by Sean L. on Jun. 16.
+Last Updated by Sean L. on Jun. 16.
+
+sewing-box
+src/style/main.scss
+
+Makabaka1880, 2026. All rights reserved.
+*/
+
+@use "theme.scss" as *;
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@200..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Noto+Sans+SC:wght@100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
+html {
+    background-color: var(--surface-0);
+    font-family: var(--mono);
+    color: var(--text);
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+#app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+p {
+    font-size: 0.9rem;
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+
+    transition: color var(--anim-dur), text-decoration var(--anim-dur);
+
+    &:hover {
+        color: var(--accent-hover);
+        text-decoration: underline;
+    }
+}
+
+button.primary {
+    background-color: var(--accent);
+    color: var(--surface-0);
+    border: 1px var(--accent) solid;
+    padding: 0.5rem;
+    border-radius: 3px;
+    font: var(--mono);
+    font-size: 0.85rem;
+    transition: background-color var(--anim-dur), border var(--anim-dur);
+
+    &:hover {
+        background-color: var(--accent-hover);
+        border: 1px var(--accent-hover) solid;
+    }
+}
+
+button.secondary {
+    background-color: var(--surface-0);
+    color: var(--accent);
+    border: 1px var(--accent) solid;
+    padding: 0.5rem;
+    border-radius: 3px;
+    font: var(--mono);
+    font-size: 0.85rem;
+    transition: background-color var(--anim-dur), color var(--anim-dur), border var(--anim-dur);
+
+    &:hover {
+        border: 1px var(--accent-hover) solid;
+        color: var(--surface-0);
+        background-color: var(--accent-hover);
+    }
+}

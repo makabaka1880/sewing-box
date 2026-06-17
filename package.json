@@ -1,0 +1,9 @@
+{
+    "private": true,
+    "scripts": {
+        "build:wasm": "wasm-pack build packages/wasm-lambda --target bundler;"
+    },
+    "dependencies": {
+        "katex": "^0.17.0"
+    }
+}

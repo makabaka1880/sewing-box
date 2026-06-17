@@ -1,0 +1,6 @@
+{
+    "name": "@sewing-box/wasm-lambda",
+    "type": "module",
+    "main": "./pkg/wasm_lambda.js",
+    "types": "./pkg/wasm_lambda.d.ts"
+}

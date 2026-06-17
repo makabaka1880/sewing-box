@@ -1,0 +1,44 @@
+/*
+Created by Sean L. on Jun. 16.
+Last Updated by Sean L. on Jun. 16.
+
+sewing-box
+src/style/theme.scss
+
+Makabaka1880, 2026. All rights reserved.
+*/
+
+$accent-hue: 50;
+
+:root {
+    --accent: oklch(0.75 0.18 #{$accent-hue});
+    --accent-hover: oklch(0.60 0.25 #{$accent-hue});
+    --accent-pressed: oklch(0.65 0.22 #{$accent-hue});
+    
+    --surface-0: oklch(0.99 0.01 #{$accent-hue});
+    --surface-1: oklch(0.96 0.02 #{$accent-hue});
+    --surface-2: oklch(0.92 0.03 #{$accent-hue});
+
+    --text: oklch(0.15 0.02 #{$accent-hue});
+    --text-muted: oklch(0.55 0.02 #{$accent-hue});
+    --text-disabled: oklch(0.65 0.01 #{$accent-hue});
+
+    --border: oklch(0.85 0.02 #{$accent-hue});
+    --border-strong: oklch(0.75 0.03 #{$accent-hue});
+
+    --success: oklch(0.70 0.18 145);
+    --warning: oklch(0.80 0.18 85);
+    --error: oklch(0.65 0.20 25);
+    --info: oklch(0.70 0.15 250);
+
+    --focus-ring: oklch(0.75 0.20 #{$accent-hue} / 0.4);
+    --selection: oklch(0.75 0.18 #{$accent-hue} / 0.25);
+
+    --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.08);
+    --shadow-md: 0 6px 18px oklch(0 0 0 / 0.12);
+    --shadow-lg: 0 18px 50px oklch(0 0 0 / 0.18);
+
+    --mono: 'JetBrains Mono';
+    --padding-safe: 24px;
+    --anim-dur: 0.15s;
+}
