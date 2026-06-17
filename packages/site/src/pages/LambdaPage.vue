@@ -16,7 +16,7 @@
                     <div class="panel-tools">
                         <button class="primary" title="Step" @click="doStep" :disabled="halted">STEP
                             &#x2192;</button>
-                        <button class="secondary" title="Run" :disabled="halted">RUN &#x21D3;</button>
+                        <button class="secondary" title="Run" @click="doRun" :disabled="halted">RUN &#x21D3;</button>
                     </div>
                     <CodeMirror v-model="code" default-content="(app (lam a a) (lam x (app x x)))" />
                 </div>
@@ -24,7 +24,11 @@
             <div class="panel">
                 <div class="panel-header">
                     <span>RESULT</span>
-                    <span v-if="steps > 0" class="step-count">{{ steps }} step{{ steps !== 1 ? 's' : '' }}</span>
+                    <div class="panel-header-right">
+                        <span v-if="steps > 0" class="step-count">{{ steps }} step{{ steps !== 1 ? 's' : '' }}</span>
+                        <button v-if="frames.length > 0" class="clear-btn" @click="clearStack"
+                            title="Clear stack">&#x2715;</button>
+                    </div>
                 </div>
                 <div id="exec-stack">
                     <template v-if="config">
@@ -118,8 +122,9 @@ const liveTermHtml = computed(() => {
 function doStep() {
     if (!program.value || halted.value) return;
     const pre = program.value.state();
+    let done: boolean;
     try {
-        program.value.step();
+        done = program.value.step();
     } catch (e) {
         errorReached.value = true;
         errorMessage.value = String(e);
@@ -129,10 +134,57 @@ function doStep() {
     }
     frames.value.push(pre);
     steps.value++;
-    const post = program.value.state();
-    if (JSON.stringify(post.term) === JSON.stringify(pre.term)) {
+    if (done) {
         frames.value[frames.value.length - 1].nf = true;
         nfReached.value = true;
+    }
+}
+
+const MAX_RUN = 64;
+
+function doRun() {
+    if (!program.value || halted.value) return;
+    clearStack();
+    let prev: any = null;
+    for (let i = 0; i < MAX_RUN; i++) {
+        prev = program.value.state();
+        let done: boolean;
+        try {
+            done = program.value.step();
+        } catch (e) {
+            errorReached.value = true;
+            errorMessage.value = String(e);
+            frames.value.push({ ...prev, error: true });
+            steps.value++;
+            return;
+        }
+        frames.value.push(prev);
+        steps.value++;
+        if (done) {
+            frames.value[frames.value.length - 1].nf = true;
+            nfReached.value = true;
+            return;
+        }
+    }
+    // Timed out after MAX_RUN steps
+    errorReached.value = true;
+    errorMessage.value = `Terminated after ${MAX_RUN} steps (possible non-termination).`;
+    frames.value[frames.value.length - 1].error = true;
+}
+
+function clearStack() {
+    frames.value = [];
+    steps.value = 0;
+    nfReached.value = false;
+    errorReached.value = false;
+    errorMessage.value = '';
+    // Re-seed the program from current code to get a fresh machine state
+    if (code.value) {
+        try {
+            program.value = new LambdaProgram(code.value);
+        } catch (e) {
+            program.value = null;
+        }
     }
 }
 
@@ -272,6 +324,28 @@ section.workspace {
         padding: 0.35rem 0.5rem;
         border: 1px solid var(--error);
         border-radius: 4px;
+    }
+
+    .panel-header-right {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .clear-btn {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        color: var(--text-muted);
+        font-size: 0.6rem;
+        padding: 0.1rem 0.35rem;
+        cursor: pointer;
+        line-height: 1;
+
+        &:hover {
+            color: var(--text);
+            border-color: var(--text-muted);
+        }
     }
 
     .step-count {
