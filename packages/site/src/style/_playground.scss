@@ -1,0 +1,103 @@
+/*
+Created by Sean L. on Jun. 17.
+Last Updated by Sean L. on Jun. 17.
+
+sewing-box
+packages/site/src/style/_playground.scss
+
+Makabaka1880, 2026. All rights reserved.
+*/
+
+@use "./main.scss" as *;
+
+main {
+    width: 100%;
+    height: 100%;
+}
+
+section.playground-header {
+    margin: 0 var(--padding-safe);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+section.workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    min-height: 0;
+
+    @media (max-width: 720px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.panel {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    grid-template-rows: auto 1fr;
+    min-height: 0;
+    overflow: hidden;
+    border-left: 1px var(--border) solid;
+
+    &:first-child {
+        border-left: none;
+    }
+}
+
+.panel-header {
+    padding: .5rem var(--padding-safe);
+    border-bottom: 1px var(--border) solid;
+    border-top: 1px var(--border) solid;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+.panel-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.editor-area {
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.result-area {
+    padding: 0 var(--padding-safe);
+    overflow-y: auto;
+    height: 100%;
+    min-height: 0;
+}
+
+
+.panel-tools {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.5rem;
+    z-index: 1;
+    display: flex;
+    gap: 0.35rem;
+    background: var(--surface-0);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.2rem 0.3rem;
+
+    :deep(button.primary),
+    :deep(button.secondary) {
+        font-size: 0.6rem;
+        padding: .15rem .45rem;
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+    }
+}

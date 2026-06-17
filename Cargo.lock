@@ -209,3 +209,13 @@ dependencies = [
  "sexp",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "wasm-stacky"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde-wasm-bindgen",
+ "sexp",
+ "wasm-bindgen",
+]

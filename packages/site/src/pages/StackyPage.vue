@@ -1,8 +1,8 @@
 <template>
     <PlaygroundLayout>
         <template #header>
-            <h2>{{ getLang("Lambda")?.name }}</h2>
-            <p>{{ getLang("Lambda")?.description }}</p>
+            <h2>{{ getLang("Stacky")?.name }}</h2>
+            <p>{{ getLang("Stacky")?.description }}</p>
         </template>
 
         <template #header-actions>
@@ -17,28 +17,32 @@
         </template>
 
         <template #editor>
-            <CodeMirror v-model="code" default-content="(app (lam a a) (lam x (app x x)))" />
+            <CodeMirror v-model="code" :default-content="sample" />
         </template>
 
-        <template #result-label>RESULT</template>
+        <template #result-label>STACK</template>
 
         <template #result-header>
             <span v-if="steps > 0" class="step-count">{{ steps }} step{{ steps !== 1 ? 's' : '' }}</span>
-            <button v-if="frames.length > 0" class="clear-btn" @click="clearStack" title="Clear stack">&#x2715;</button>
+            <button v-if="steps > 0" class="clear-btn" @click="clearStack" title="Clear">&#x2715;</button>
         </template>
 
         <template #result>
             <div class="result-inner">
                 <template v-if="config">
-                    <div class="live-term" v-html="liveTermHtml"></div>
-                    <LambdaFrameCard v-for="(frame, i) in frames" :key="i" :config="frame" :nf="frame.nf"
-                        :error="frame.error" class="frame-entry" />
+                    <div class="tree-stack">
+                        <div v-for="(node, i) in config.stack" :key="i" class="stack-cell">
+                            <span class="stack-index">{{ i }}</span>
+                            <TreeCard :node="node" />
+                        </div>
+                        <div v-if="config.stack.length === 0" class="placeholder">Stack empty</div>
+                    </div>
+                    <div v-if="nfReached" class="nf-msg">Normal form reached.</div>
                     <div v-if="errorReached" class="error-msg">{{ errorMessage }}</div>
                 </template>
-                <div v-else class="placeholder">Enter a lambda term in the editor</div>
+                <div v-else class="placeholder">Enter a Stacky program in the editor</div>
             </div>
         </template>
-
     </PlaygroundLayout>
 
     <Teleport to="body">
@@ -56,46 +60,32 @@
 
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue';
-import { getLang, getGrammar, generateEBNF } from '@/cfg/langs';
+import { getLang, getGrammar, generateEBNF, getSample } from '@/cfg/langs';
 import PlaygroundLayout from '@/components/PlaygroundLayout.vue';
 import CodeMirror from '@/components/CodeMirror.vue';
-import LambdaFrameCard from '@/components/Lambda/LambdaFrameCard.vue';
-import { LambdaProgram } from "@sewing-box/wasm-lambda";
-import katex from 'katex';
-import 'katex/dist/katex.min.css';
+import TreeCard from '@/components/Stacky/TreeCard.vue';
+import { StackyProgramWasm } from "@sewing-box/wasm-stacky";
 
 const showGrammar = ref(false);
-const grammarEBNF = generateEBNF(getGrammar('Lambda') ?? []);
+const grammarEBNF = generateEBNF(getGrammar('Stacky') ?? []);
+const sample = getSample('Stacky') ?? '';
 
 const code = ref('');
-const program = ref<LambdaProgram | null>(null);
-const frames = ref<any[]>([]);
+const program = ref<StackyProgramWasm | null>(null);
 const steps = ref(0);
 const nfReached = ref(false);
 const errorReached = ref(false);
 const errorMessage = ref('');
 
-function termToTexLive(term: any): string {
-    if ('Var' in term) return term.Var;
-    if ('Lam' in term) {
-        const [param, body] = term.Lam;
-        return `\\lambda ${param}. ${termToTexLive(body)}`;
-    }
-    const [M, N] = term.App;
-    return `(${termToTexLive(M!)})\\;( ${termToTexLive(N!)})`;
-}
-
 watch(code, (src) => {
     try {
-        program.value = new LambdaProgram(src);
-        frames.value = [];
+        program.value = new StackyProgramWasm(src);
         steps.value = 0;
         nfReached.value = false;
         errorReached.value = false;
         errorMessage.value = '';
     } catch (e) {
         program.value = null;
-        frames.value = [];
         steps.value = 0;
         nfReached.value = false;
         errorReached.value = false;
@@ -108,34 +98,22 @@ const halted = computed(() => nfReached.value || errorReached.value);
 const config = computed(() => {
     if (!program.value) return null;
     void steps.value; // WASM state is opaque — force recompute when steps changes
-    return program.value.state();
-});
-
-const liveTermHtml = computed(() => {
-    if (!config.value) return '';
-    return katex.renderToString(termToTexLive(config.value.term), {
-        displayMode: true,
-        throwOnError: false,
-    });
+    const raw = program.value.state() as { remaining: number; stack: any[] };
+    return { remaining: raw.remaining, stack: [...raw.stack].reverse() };
 });
 
 function doStep() {
     if (!program.value || halted.value) return;
-    const pre = program.value.state();
     let done: boolean;
     try {
         done = program.value.step();
     } catch (e) {
         errorReached.value = true;
         errorMessage.value = String(e);
-        frames.value.push({ ...pre, error: true });
-        steps.value++;
         return;
     }
-    frames.value.push(pre);
     steps.value++;
     if (done) {
-        frames.value[frames.value.length - 1].nf = true;
         nfReached.value = true;
     }
 }
@@ -145,55 +123,43 @@ const MAX_RUN = 64;
 function doRun() {
     if (!program.value || halted.value) return;
     clearStack();
-    let prev: any = null;
+    let done = false;
     for (let i = 0; i < MAX_RUN; i++) {
-        prev = program.value.state();
-        let done: boolean;
         try {
             done = program.value.step();
         } catch (e) {
             errorReached.value = true;
             errorMessage.value = String(e);
-            frames.value.push({ ...prev, error: true });
             steps.value++;
             return;
         }
-        frames.value.push(prev);
         steps.value++;
         if (done) {
-            frames.value[frames.value.length - 1].nf = true;
             nfReached.value = true;
             return;
         }
     }
-    // Timed out after MAX_RUN steps
     errorReached.value = true;
     errorMessage.value = `Terminated after ${MAX_RUN} steps (possible non-termination).`;
-    frames.value[frames.value.length - 1].error = true;
 }
 
 function clearStack() {
-    frames.value = [];
     steps.value = 0;
     nfReached.value = false;
     errorReached.value = false;
     errorMessage.value = '';
-    // Re-seed the program from current code to get a fresh machine state
     if (code.value) {
         try {
-            program.value = new LambdaProgram(code.value);
+            program.value = new StackyProgramWasm(code.value);
         } catch (e) {
             program.value = null;
         }
     }
 }
-
 </script>
 
 <style lang="scss" scoped>
 @use "@/style/main.scss" as *;
-
-// ---- grammar modal (page-local) ----
 
 .modal-overlay {
     position: fixed;
@@ -242,26 +208,45 @@ function clearStack() {
     color: var(--text-muted);
 }
 
-// ---- result panel content (page-local) ----
-
 .result-inner {
-    padding-top: var(--padding-safe);
     padding-bottom: var(--padding-safe);
 }
 
-.live-term {
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 0.5rem;
-    margin-bottom: 0.5rem;
+.tree-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
-.frame-entry {
-    margin-bottom: 0.5rem;
+.stack-cell {
+    position: relative;
+    padding: 0.5rem 0;
+    border-bottom: 1px var(--border) solid;
+}
+
+.stack-index {
+    position: absolute;
+    top: .75rem;
+    left: -1rem;
+    font-size: 0.55rem;
+    color: var(--text-muted);
+    font-family: var(--mono);
 }
 
 .placeholder {
+    padding-top: var(--padding-safe);
     color: var(--text-muted);
     font-size: 0.75rem;
+}
+
+.nf-msg {
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-family: var(--mono);
+    margin-top: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
 }
 
 .error-msg {

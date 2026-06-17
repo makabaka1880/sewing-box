@@ -5,6 +5,7 @@ import { createPinia } from 'pinia'
 import HomeView from './pages/HomeView.vue'
 import App from './App.vue'
 import LambdaPage from '@/pages/LambdaPage.vue'
+import StackyPage from '@/pages/StackyPage.vue'
 import NotFoundPage from '@/pages/NotFoundPage.vue'
 
 const routes = [
@@ -14,6 +15,10 @@ const routes = [
             {
                 path: 'lambda',
                 component: LambdaPage
+            },
+            {
+                path: 'stacky',
+                component: StackyPage
             },
         ]
     },

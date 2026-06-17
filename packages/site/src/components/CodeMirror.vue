@@ -11,13 +11,13 @@ import { Codemirror } from 'vue-codemirror'
 const code = defineModel<string>({ default: '' })
 
 const props = withDefaults(defineProps<{
-  defaultContent?: string
+    defaultContent?: string
 }>(), {
-  defaultContent: '',
+    defaultContent: '',
 })
 
 if (props.defaultContent) {
-  code.value = props.defaultContent
+    code.value = props.defaultContent
 }
 
 const extensions: any[] = []

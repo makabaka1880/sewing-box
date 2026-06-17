@@ -1,0 +1,6 @@
+{
+    "name": "@sewing-box/wasm-stacky",
+    "type": "module",
+    "main": "./pkg/wasm_stacky.js",
+    "types": "./pkg/wasm_stacky.d.ts"
+}

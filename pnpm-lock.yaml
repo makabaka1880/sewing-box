@@ -20,6 +20,9 @@ importers:
       '@sewing-box/wasm-lambda':
         specifier: workspace:*
         version: link:../wasm-lambda
+      '@sewing-box/wasm-stacky':
+        specifier: workspace:*
+        version: link:../wasm-stacky
       codemirror:
         specifier: ^6.0.2
         version: 6.0.2
@@ -77,6 +80,8 @@ importers:
         version: 3.3.5(typescript@6.0.3)
 
   packages/wasm-lambda: {}
+
+  packages/wasm-stacky: {}
 
 packages:
 

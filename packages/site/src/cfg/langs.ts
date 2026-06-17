@@ -33,6 +33,36 @@ export const profiles: LangProfile[] = [
             }
         ],
         sample: "(app (lam x x) (lam y y))"
+    },
+    {
+        name: "Stacky",
+        description: "A stack-based combinator language. Push atoms onto a stack, then plant them as branches of a tree.",
+        grammar: [
+            {
+                nonterminal: "stmt",
+                produces: ["(push s)", "(plant s n)"],
+            },
+            {
+                nonterminal: "s",
+                produces: ["any string"]
+            },
+            {
+                nonterminal: "n",
+                produces: ["any non-negative integer"]
+            },
+            {
+                nonterminal: "program",
+                produces: ["(stmt ...)"]
+            }
+        ],
+        sample: `((push bread)
+(push lettuce)
+(push cheese)
+(push ham)
+(plant filling 3)
+(push bread)
+(plant sandwich 3))
+        `
     }
 ]
 
