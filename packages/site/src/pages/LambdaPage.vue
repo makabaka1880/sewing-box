@@ -17,7 +17,7 @@
         </template>
 
         <template #editor>
-            <CodeMirror v-model="code" default-content="(app (lam a a) (lam x (app x x)))" />
+            <CodeMirror v-model="code" />
         </template>
 
         <template #result-label>RESULT</template>
@@ -56,7 +56,8 @@
 
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue';
-import { getLang, getGrammar, generateEBNF } from '@/cfg/langs';
+import { getLang, getGrammar, generateEBNF, getSample } from '@/cfg/langs';
+import { useEditorStore } from '@/stores/editor';
 import PlaygroundLayout from '@/components/PlaygroundLayout.vue';
 import CodeMirror from '@/components/CodeMirror.vue';
 import LambdaFrameCard from '@/components/Lambda/LambdaFrameCard.vue';
@@ -64,10 +65,12 @@ import { LambdaProgram } from "@sewing-box/wasm-lambda";
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
+const store = useEditorStore();
 const showGrammar = ref(false);
 const grammarEBNF = generateEBNF(getGrammar('Lambda') ?? []);
+const sample = getSample('Lambda') ?? '';
 
-const code = ref('');
+const code = ref(store.getCode('Lambda', sample));
 const program = ref<LambdaProgram | null>(null);
 const frames = ref<any[]>([]);
 const steps = ref(0);
@@ -102,6 +105,8 @@ watch(code, (src) => {
         errorMessage.value = '';
     }
 }, { immediate: true });
+
+watch(code, (v) => store.setCode('Lambda', v));
 
 const halted = computed(() => nfReached.value || errorReached.value);
 

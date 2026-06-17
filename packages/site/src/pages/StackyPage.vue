@@ -17,7 +17,7 @@
         </template>
 
         <template #editor>
-            <CodeMirror v-model="code" :default-content="sample" />
+            <CodeMirror v-model="code" />
         </template>
 
         <template #result-label>STACK</template>
@@ -61,16 +61,18 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue';
 import { getLang, getGrammar, generateEBNF, getSample } from '@/cfg/langs';
+import { useEditorStore } from '@/stores/editor';
 import PlaygroundLayout from '@/components/PlaygroundLayout.vue';
 import CodeMirror from '@/components/CodeMirror.vue';
 import TreeCard from '@/components/Stacky/TreeCard.vue';
 import { StackyProgramWasm } from "@sewing-box/wasm-stacky";
 
+const store = useEditorStore();
 const showGrammar = ref(false);
 const grammarEBNF = generateEBNF(getGrammar('Stacky') ?? []);
 const sample = getSample('Stacky') ?? '';
 
-const code = ref('');
+const code = ref(store.getCode('Stacky', sample));
 const program = ref<StackyProgramWasm | null>(null);
 const steps = ref(0);
 const nfReached = ref(false);
@@ -92,6 +94,8 @@ watch(code, (src) => {
         errorMessage.value = '';
     }
 }, { immediate: true });
+
+watch(code, (v) => store.setCode('Stacky', v));
 
 const halted = computed(() => nfReached.value || errorReached.value);
 

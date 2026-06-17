@@ -11,6 +11,7 @@
         "type-check": "vue-tsc --build"
     },
     "dependencies": {
+        "@codemirror/view": "^6.43.1",
         "@fsegurai/codemirror-theme-gruvbox-light": "^6.2.5",
         "@sewing-box/wasm-lambda": "workspace:*",
         "@sewing-box/wasm-stacky": "workspace:*",
