@@ -6,12 +6,17 @@ import HomeView from './pages/HomeView.vue'
 import App from './App.vue'
 import LambdaPage from '@/pages/LambdaPage.vue'
 import StackyPage from '@/pages/StackyPage.vue'
+import LangIndexPage from '@/pages/LangIndexPage.vue'
 import NotFoundPage from '@/pages/NotFoundPage.vue'
 
 const routes = [
     {
         path: '/lang',
         children: [
+            {
+                path: '',
+                component: LangIndexPage
+            },
             {
                 path: 'lambda',
                 component: LambdaPage
