@@ -63,6 +63,21 @@ export const profiles: LangProfile[] = [
 (push bread)
 (plant sandwich 3))
         `
+    },
+    {
+        name: "Brainfuck",
+        description: "An esoteric, Turing-complete language with an 8-instruction pointer-based tape machine. Minimal syntax, maximal confusion.",
+        grammar: [
+            {
+                nonterminal: "instr",
+                produces: ["+", "-", ">", "<", "[", "]", ".", ","]
+            },
+            {
+                nonterminal: "program",
+                produces: ["instr ..."]
+            }
+        ],
+        sample: `++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.`
     }
 ]
 

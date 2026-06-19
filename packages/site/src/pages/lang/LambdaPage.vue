@@ -1,5 +1,5 @@
 <template>
-    <PlaygroundLayout>
+    <PlaygroundLayout v-model:show-grammar="showGrammar">
         <template #header>
             <h2>{{ getLang("Lambda")?.name }}</h2>
             <p>{{ getLang("Lambda")?.description }}</p>
@@ -39,19 +39,10 @@
             </div>
         </template>
 
+        <template #grammar-body>
+            <pre>{{ grammarEBNF }}</pre>
+        </template>
     </PlaygroundLayout>
-
-    <Teleport to="body">
-        <div v-if="showGrammar" class="modal-overlay" @click.self="showGrammar = false">
-            <div class="modal">
-                <div class="modal-header">
-                    <span>Grammar (EBNF)</span>
-                    <button class="modal-close" @click="showGrammar = false">&times;</button>
-                </div>
-                <pre class="modal-body">{{ grammarEBNF }}</pre>
-            </div>
-        </div>
-    </Teleport>
 </template>
 
 <script lang="ts" setup>
@@ -197,55 +188,6 @@ function clearStack() {
 
 <style lang="scss" scoped>
 @use "@/style/main.scss" as *;
-
-// ---- grammar modal (page-local) ----
-
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-}
-
-.modal {
-    background: var(--surface-0);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    width: min(520px, 90vw);
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.modal-header {
-    padding: 0.6rem var(--padding-safe);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.8rem;
-
-    .modal-close {
-        background: none;
-        border: none;
-        font-size: 1.5em;
-    }
-}
-
-.modal-body {
-    padding: var(--padding-safe);
-    margin: 0;
-    font-family: var(--mono);
-    font-size: 0.8rem;
-    line-height: 1.6;
-    overflow: auto;
-    white-space: pre-wrap;
-    color: var(--text-muted);
-}
 
 // ---- result panel content (page-local) ----
 

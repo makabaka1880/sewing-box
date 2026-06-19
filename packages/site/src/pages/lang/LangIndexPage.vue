@@ -3,10 +3,6 @@
         <section class="header">
             <h1>Languages</h1>
             <p>Pick a language to explore its interpreter and debugger.</p>
-            <div class="buttons">
-                <button class="primary" @click="goRandomLanguage">Random Language -></button>
-                <button class="secondary" @click="goGitHub">GitHub -></button>
-            </div>
         </section>
         <div class="langcards">
             <LangCard v-for="profile in profiles" :profile="profile" />
@@ -22,14 +18,6 @@ import LangCard from '@/components/LangCard.vue';
 
 const router = useRouter();
 
-function goRandomLanguage() {
-    const profile = profiles[Math.floor(Math.random() * profiles.length)]!;
-    router.push('/lang/' + profile.name.toLowerCase());
-}
-
-function goGitHub() {
-    window.open('https://github.com/makabaka1880/sewing-box', '_blank');
-}
 </script>
 
 <style lang="scss" scoped>

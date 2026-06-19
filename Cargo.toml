@@ -1,4 +1,6 @@
 [workspace]
 members = [
-    "packages/wasm-lambda", "packages/wasm-stacky",
+    "packages/wasm-brainfuck",
+    "packages/wasm-lambda",
+    "packages/wasm-stacky",
 ]

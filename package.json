@@ -1,7 +1,7 @@
 {
     "private": true,
     "scripts": {
-        "build:wasm": "wasm-pack build packages/wasm-lambda --target bundler && wasm-pack build packages/wasm-stacky --target bundler"
+        "build:wasm": "for crate in packages/wasm-*; do wasm-pack build \"$crate\" --target bundler || exit 1; done"
     },
     "dependencies": {
         "katex": "^0.17.0"

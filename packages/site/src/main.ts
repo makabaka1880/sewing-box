@@ -4,9 +4,10 @@ import { createPinia } from 'pinia'
 
 import HomeView from './pages/HomeView.vue'
 import App from './App.vue'
-import LambdaPage from '@/pages/LambdaPage.vue'
-import StackyPage from '@/pages/StackyPage.vue'
-import LangIndexPage from '@/pages/LangIndexPage.vue'
+import LambdaPage from '@/pages/lang/LambdaPage.vue'
+import StackyPage from '@/pages/lang/StackyPage.vue'
+import BrainfuckPage from '@/pages/lang/BrainfuckPage.vue'
+import LangIndexPage from '@/pages/lang/LangIndexPage.vue'
 import NotFoundPage from '@/pages/NotFoundPage.vue'
 
 const routes = [
@@ -24,6 +25,10 @@ const routes = [
             {
                 path: 'stacky',
                 component: StackyPage
+            },
+            {
+                path: 'brainfuck',
+                component: BrainfuckPage
             },
         ]
     },

@@ -1,0 +1,6 @@
+{
+    "name": "@sewing-box/wasm-brainfuck",
+    "type": "module",
+    "main": "./pkg/wasm_brainfuck.js",
+    "types": "./pkg/wasm_brainfuck.d.ts"
+}

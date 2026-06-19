@@ -201,6 +201,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasm-brainfuck"
+version = "0.1.0"
+dependencies = [
+ "serde-wasm-bindgen",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "wasm-lambda"
 version = "0.1.0"
 dependencies = [

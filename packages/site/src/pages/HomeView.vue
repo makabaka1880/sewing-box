@@ -25,9 +25,6 @@ function goLang() {
     router.push('/lang/');
 }
 
-function goGitHub() {
-    window.open('https://github.com/makabaka1880/sewing-box', '_blank');
-}
 </script>
 
 <style lang="scss" scoped>
