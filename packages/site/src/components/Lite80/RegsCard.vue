@@ -2,26 +2,41 @@
     <div class="regs-card">
         <div class="regs-top">
             <div class="regs-grid">
-                <div class="reg-cell acc">
+                <div class="reg-cell acc" :class="{ editing: editing === 7 }" @click="beginEdit(7)">
                     <span class="reg-name">A</span>
-                    <span class="reg-val">{{ fmtHex(values[7] ?? 0, 2) }}</span>
+                    <span v-if="editing !== 7" class="reg-val">{{ fmtHex(values[7] ?? 0, 2) }}</span>
+                    <input v-else ref="editInputs" class="reg-input" :value="editText" maxlength="2" spellcheck="false"
+                        @input="onInput" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" @blur="commitEdit" />
                 </div>
                 <div v-for="pair in pairs" :key="pair.hi" class="reg-pair">
-                    <div class="reg-cell">
+                    <div class="reg-cell" :class="{ editing: editing === pair.hiCode }" @click="beginEdit(pair.hiCode)">
                         <span class="reg-name">{{ pair.hi }}</span>
-                        <span class="reg-val">{{ fmtHex(values[pair.hiCode] ?? 0, 2) }}</span>
+                        <span v-if="editing !== pair.hiCode" class="reg-val">{{ fmtHex(values[pair.hiCode] ?? 0, 2) }}</span>
+                        <input v-else ref="editInputs" class="reg-input" :value="editText" maxlength="2" spellcheck="false"
+                            @input="onInput" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" @blur="commitEdit" />
                     </div>
-                    <div class="reg-cell">
+                    <div class="reg-cell" :class="{ editing: editing === pair.loCode }" @click="beginEdit(pair.loCode)">
                         <span class="reg-name">{{ pair.lo }}</span>
-                        <span class="reg-val">{{ fmtHex(values[pair.loCode] ?? 0, 2) }}</span>
+                        <span v-if="editing !== pair.loCode" class="reg-val">{{ fmtHex(values[pair.loCode] ?? 0, 2) }}</span>
+                        <input v-else ref="editInputs" class="reg-input" :value="editText" maxlength="2" spellcheck="false"
+                            @input="onInput" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" @blur="commitEdit" />
                     </div>
                 </div>
             </div>
             <div class="flags">
-                <span v-for="f in flagBits" :key="f.bit" class="flag-chip" :class="{ set: flagSet(f.bit) }">
+                <button v-for="f in flagBits" :key="f.bit" class="flag-chip" :class="{ set: flagSet(f.bit) }"
+                    @click.stop="toggleFlag(f.bit)">
                     {{ f.label }}
+                </button>
+                <button class="flag-chip int-chip" :class="{ set: intEnabled }"
+                    @click.stop="emit('update:int-enabled', !intEnabled)">
+                    INT
+                </button>
+                <span class="flag-hex-label" :class="{ editing: editing === 6 }" @click.stop="beginEdit(6)">
+                    <span v-if="editing !== 6">F:{{ fmtHex(values[6] ?? 0, 2) }}</span>
+                    <input v-else class="flag-input" :value="editText" maxlength="2" spellcheck="false" @input="onInput"
+                        @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" @blur="commitEdit" />
                 </span>
-                <span class="flag-chip int-chip" :class="{ set: intEnabled }">INT</span>
             </div>
         </div>
         <div class="ptrs">
@@ -31,7 +46,7 @@
                 <span v-if="editing !== 'pc'" class="ptr-val clickable" @click="beginEdit('pc', pc)">{{ fmtHex(pc, 4)
                 }}</span>
                 <input v-else ref="editInputPc" class="ptr-input" :value="editText" maxlength="4" spellcheck="false"
-                    @input="onInput" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" />
+                    @input="onInputWide" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" />
                 <button class="ptr-step right" @click="emit('update:pc', (pc + 1) & 0xFFFF)">+</button>
             </div>
             <div class="ptr-row">
@@ -40,7 +55,7 @@
                 <span v-if="editing !== 'sp'" class="ptr-val clickable" @click="beginEdit('sp', sp)">{{ fmtHex(sp, 4)
                 }}</span>
                 <input v-else ref="editInputSp" class="ptr-input" :value="editText" maxlength="4" spellcheck="false"
-                    @input="onInput" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" />
+                    @input="onInputWide" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" />
                 <button class="ptr-step right" @click="emit('update:sp', (sp + 1) & 0xFFFF)">+</button>
             </div>
         </div>
@@ -60,7 +75,14 @@ const props = defineProps<{
 const emit = defineEmits<{
     (e: 'update:pc', val: number): void;
     (e: 'update:sp', val: number): void;
+    (e: 'update:reg', idx: number, val: number): void;
+    (e: 'update:int-enabled', val: boolean): void;
 }>();
+
+function toggleFlag(bit: number) {
+    const f = props.values[6] ?? 0;
+    emit('update:reg', 6, f ^ (1 << bit));
+}
 
 const pairs = [
     { hi: 'B', hiCode: 0, lo: 'C', loCode: 1 },
@@ -76,8 +98,9 @@ const flagBits = [
     { label: 'C', bit: 0 },
 ];
 
-const editing = ref<string | null>(null);
+const editing = ref<number | string | null>(null);
 const editText = ref('');
+const editInputs = ref<HTMLInputElement | HTMLInputElement[] | null>(null);
 const editInputPc = ref<HTMLInputElement | null>(null);
 const editInputSp = ref<HTMLInputElement | null>(null);
 
@@ -91,17 +114,30 @@ function flagSet(bit: number): boolean {
 }
 
 function onInput(e: Event) {
+    const raw = (e.target as HTMLInputElement).value.replace(/[^0-9a-fA-F]/g, '').slice(0, 2);
+    editText.value = raw.toUpperCase();
+}
+
+function onInputWide(e: Event) {
     const raw = (e.target as HTMLInputElement).value.replace(/[^0-9a-fA-F]/g, '').slice(0, 4);
     editText.value = raw.toUpperCase();
 }
 
-function beginEdit(field: string, current: number) {
+function beginEdit(field: number | string, current?: number) {
     editing.value = field;
-    editText.value = fmtHex(current, 4);
+    if (typeof field === 'number') {
+        editText.value = fmtHex(props.values[field] ?? 0, 2);
+    } else {
+        editText.value = fmtHex(current ?? 0, 4);
+    }
     nextTick(() => {
-        const inp = field === 'pc' ? editInputPc.value : editInputSp.value;
-        inp?.focus();
-        inp?.select();
+        const els = Array.isArray(editInputs.value) ? editInputs.value : [editInputs.value];
+        const el = els[els.length - 1] as HTMLInputElement | undefined;
+        const pcEl = editInputPc.value;
+        const spEl = editInputSp.value;
+        const target = typeof field === 'number' ? el : field === 'pc' ? pcEl : spEl;
+        target?.focus();
+        target?.select();
     });
 }
 
@@ -114,10 +150,17 @@ function commitEdit() {
     if (editing.value === null) return;
     const field = editing.value;
     const hex = editText.value || '0';
-    const val = parseInt(hex, 16);
-    if (!isNaN(val) && val >= 0 && val <= 0xFFFF) {
-        if (field === 'pc') emit('update:pc', val);
-        else emit('update:sp', val);
+    if (typeof field === 'number') {
+        const val = parseInt(hex, 16);
+        if (!isNaN(val) && val >= 0 && val <= 0xFF) {
+            emit('update:reg', field, val);
+        }
+    } else {
+        const val = parseInt(hex, 16);
+        if (!isNaN(val) && val >= 0 && val <= 0xFFFF) {
+            if (field === 'pc') emit('update:pc', val);
+            else emit('update:sp', val);
+        }
     }
     editing.value = null;
     editText.value = '';
@@ -140,14 +183,14 @@ function commitEdit() {
 .regs-grid {
     display: grid;
     grid-template-columns: 1fr repeat(3, 1fr);
-    gap: 2px;
+    gap: 3px;
     flex: 1;
 }
 
 .reg-pair {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     grid-row: span 2;
 
     >.reg-cell {
@@ -166,16 +209,25 @@ function commitEdit() {
     border-radius: 3px;
     font-family: var(--mono);
     color: var(--text-muted);
+    cursor: pointer;
     transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+
+    &:hover {
+        border-color: var(--text-muted);
+    }
 
     &.acc {
         grid-row: span 2;
-        // border-color: var(--border-strong);
         color: var(--text);
 
         .reg-val {
             font-size: 1rem;
         }
+    }
+
+    &.editing {
+        border-color: var(--accent);
+        background-color: var(--surface-1);
     }
 }
 
@@ -186,6 +238,18 @@ function commitEdit() {
 
 .reg-val {
     font-size: 0.7rem;
+}
+
+.reg-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-align: center;
+    padding: 0;
 }
 
 .flags {
@@ -202,8 +266,10 @@ function commitEdit() {
     padding: 0.2rem 0.35rem;
     border: 1px solid var(--border);
     border-radius: 3px;
+    background: none;
     color: var(--text-muted);
     opacity: 0.35;
+    cursor: pointer;
     transition: opacity 0.15s, border-color 0.15s, color 0.15s;
 
     &.set {
@@ -221,6 +287,32 @@ function commitEdit() {
         border-color: var(--accent);
         color: var(--accent);
     }
+}
+
+.flag-hex-label {
+    margin-top: 2px;
+    font-family: var(--mono);
+    font-size: 0.45rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+    text-align: center;
+    cursor: pointer;
+
+    &.editing {
+        opacity: 1;
+    }
+}
+
+.flag-input {
+    width: 2.5rem;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    text-align: center;
+    padding: 0;
 }
 
 .ptrs {

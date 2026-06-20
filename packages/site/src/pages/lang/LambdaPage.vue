@@ -1,12 +1,12 @@
 <template>
-    <PlaygroundLayout v-model:show-grammar="showGrammar">
+    <PlaygroundLayout>
         <template #header>
             <h2>{{ getLang("Lambda")?.name }}</h2>
             <p>{{ getLang("Lambda")?.description }}</p>
         </template>
 
         <template #header-actions>
-            <button class="secondary" @click="showGrammar = true">Spec &#x2197;</button>
+            <button class="secondary" @click="openSpec">Spec &#x2197;</button>
         </template>
 
         <template #editor-label>EDITOR</template>
@@ -38,15 +38,11 @@
                 <div v-else class="placeholder">Enter a lambda term in the editor</div>
             </div>
         </template>
-
-        <template #grammar-body>
-            <pre>{{ grammarEBNF }}</pre>
-        </template>
     </PlaygroundLayout>
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
 import { getLang, getGrammar, generateEBNF, getSample } from '@/cfg/langs';
 import { useEditorStore } from '@/stores/editor';
 import PlaygroundLayout from '@/components/PlaygroundLayout.vue';
@@ -57,8 +53,12 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
 const store = useEditorStore();
-const showGrammar = ref(false);
+const grammarModal = inject<{ show: boolean; content: string }>('grammarModal')!;
 const grammarEBNF = generateEBNF(getGrammar('Lambda') ?? []);
+function openSpec() {
+    grammarModal.content = `<pre>${grammarEBNF}</pre>`;
+    grammarModal.show = true;
+}
 const sample = getSample('Lambda') ?? '';
 
 const code = ref(store.getCode('Lambda', sample));

@@ -30,27 +30,11 @@
                 </div>
             </div>
         </section>
-
-        <Teleport to="body">
-            <div v-if="showGrammar" class="pg-modal-overlay" @click.self="showGrammar = false">
-                <div class="pg-modal">
-                    <div class="pg-modal-header">
-                        <span>Grammar (EBNF)</span>
-                        <button class="pg-modal-close" @click="showGrammar = false">&times;</button>
-                    </div>
-                    <div class="pg-modal-body">
-                        <slot name="grammar-body" />
-                    </div>
-                </div>
-            </div>
-        </Teleport>
     </main>
 </template>
 
 <script lang="ts" setup>
 import { computed, useSlots } from 'vue';
-
-const showGrammar = defineModel<boolean>('showGrammar', { default: false });
 
 const slots = useSlots();
 const hasEditorTools = computed(() => !!slots['editor-tools']);

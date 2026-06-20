@@ -1,12 +1,12 @@
 <template>
-    <PlaygroundLayout v-model:show-grammar="showGrammar">
+    <PlaygroundLayout>
         <template #header>
             <h2>{{ getLang("Lite80")?.name }}</h2>
             <p>{{ getLang("Lite80")?.description }}</p>
         </template>
 
         <template #header-actions>
-            <button class="secondary" @click="showGrammar = true">Spec &#x2197;</button>
+            <button class="secondary" @click="openSpec">Spec &#x2197;</button>
         </template>
 
         <template #editor-label>EDITOR</template>
@@ -30,9 +30,11 @@
         <template #result>
             <div class="result-wrapper">
                 <section class="result">
-                    <RegsCard :values="regs" :pc="pc" :sp="sp" :int-enabled="intEnabled" @update:pc="onPcChange"
-                        @update:sp="onSpChange" />
+                    <RegsCard :values="regs" :pc="pc" :sp="sp" :int-enabled="intEnabled"
+                        @update:pc="onPcChange" @update:sp="onSpChange" @update:reg="onRegChange"
+                        @update:int-enabled="onIntEnabledChange" />
                     <div v-if="curAsm" class="cur-asm">{{ curAsm }}</div>
+                    <div v-if="curBytes" class="cur-bytes"><span class="bytes-addr">{{ curBytesAddr }}</span> {{ curBytes }}</div>
                     <div v-if="halted" class="halted-msg">Program halted.</div>
                     <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
                 </section>
@@ -48,15 +50,11 @@
             </div>
             <!-- TODO: machine state visualisation -->
         </template>
-
-        <template #grammar-body>
-            <pre>{{ grammarEBNF }}</pre>
-        </template>
     </PlaygroundLayout>
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { inject, ref, watch } from 'vue';
 import { getLang, getGrammar, generateEBNF, getSample } from '@/cfg/langs';
 import { useEditorStore } from '@/stores/editor';
 import PlaygroundLayout from '@/components/PlaygroundLayout.vue';
@@ -66,8 +64,12 @@ import RegsCard from '@/components/Lite80/RegsCard.vue';
 import { I8080Wasm } from "@sewing-box/wasm-i8080";
 
 const store = useEditorStore();
-const showGrammar = ref(false);
+const grammarModal = inject<{ show: boolean; content: string }>('grammarModal')!;
 const grammarEBNF = generateEBNF(getGrammar('Lite80') ?? []);
+function openSpec() {
+    grammarModal.content = `<pre>${grammarEBNF}</pre>`;
+    grammarModal.show = true;
+}
 const sample = getSample('Lite80') ?? '';
 
 const code = ref(store.getCode('Lite80', sample));
@@ -82,6 +84,8 @@ const errorMsg = ref('');
 const steps = ref(0);
 const halted = ref(false);
 const curAsm = ref('');
+const curBytes = ref('');
+const curBytesAddr = ref('');
 const portHistory = ref<Record<number, HistoryEntry[]>>({});
 const MAX_HISTORY = 40;
 
@@ -93,6 +97,13 @@ function pushPortHistory(addr: number, entry: HistoryEntry) {
 
 function syncAsm() {
     curAsm.value = program.value?.disasm() ?? '';
+    const bytes = program.value?.instr_bytes();
+    if (bytes && bytes.length > 0) {
+        curBytesAddr.value = (pc.value & 0xFFFF).toString(16).toUpperCase().padStart(4, '0') + ':';
+        curBytes.value = Array.from(bytes).map(b => b.toString(2).padStart(8, '0')).join(' ');
+    } else {
+        curBytes.value = '';
+    }
 }
 
 watch(code, (v) => store.setCode('Lite80', v));
@@ -110,12 +121,25 @@ function syncState() {
 function onPcChange(val: number) {
     pc.value = val;
     program.value?.set_pc(val);
+    halted.value = false;
+    errorMsg.value = '';
     syncAsm();
 }
 function onSpChange(val: number) {
     sp.value = val;
     program.value?.set_sp(val);
     syncAsm();
+}
+function onRegChange(idx: number, val: number) {
+    const next = [...regs.value];
+    next[idx] = val;
+    regs.value = next;
+    program.value?.set_regs(new Uint8Array(next));
+    if (idx === 6) syncState(); // flags may affect int_enable visuals
+}
+function onIntEnabledChange(val: boolean) {
+    intEnabled.value = val;
+    program.value?.set_int_enabled(val);
 }
 
 function doAssemble() {
@@ -254,6 +278,18 @@ function doRun() {
     color: var(--accent);
     margin-top: 0.25rem;
     margin-bottom: 0.25rem;
+}
+
+.cur-bytes {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.bytes-addr {
+    font-weight: 700;
+    color: var(--accent);
 }
 
 .halted-msg {

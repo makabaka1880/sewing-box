@@ -61,6 +61,12 @@ impl I8080Wasm {
     }
 
     #[wasm_bindgen]
+    pub fn set_regs(&mut self, val: Vec<u8>) {
+        let len = val.len().min(8);
+        self.inner.regs[..len].copy_from_slice(&val[..len]);
+    }
+
+    #[wasm_bindgen]
     pub fn pc(&self) -> u16 {
         self.inner.pc
     }
@@ -86,6 +92,15 @@ impl I8080Wasm {
     }
 
     #[wasm_bindgen]
+    pub fn instr_bytes(&self) -> Vec<u8> {
+        let addr = self.inner.pc as usize;
+        if addr + 3 > 0x10000 {
+            return self.inner.mem[addr..].to_vec();
+        }
+        self.inner.mem[addr..addr + 3].to_vec()
+    }
+
+    #[wasm_bindgen]
     pub fn ports(&self) -> Vec<u8> {
         self.inner.ports.to_vec()
     }
@@ -99,6 +114,11 @@ impl I8080Wasm {
     #[wasm_bindgen]
     pub fn int_enabled(&self) -> bool {
         self.inner.int_enable
+    }
+
+    #[wasm_bindgen]
+    pub fn set_int_enabled(&mut self, val: bool) {
+        self.inner.int_enable = val;
     }
 
     #[wasm_bindgen]
