@@ -254,6 +254,7 @@ function doRun() {
     padding-left: var(--padding-safe);
     padding-right: var(--padding-safe);
     padding-top: .5rem;
+    min-width: 0;
 
     &.collapsed {
         padding-top: .35rem;
@@ -287,6 +288,7 @@ function doRun() {
 
 .config-body {
     padding-top: 0.5rem;
+    overflow-x: scroll;
 }
 
 .result {

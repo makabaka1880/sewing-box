@@ -3,8 +3,8 @@
         <div class="mem-toolbar">
             <label class="jump-label">Addr:</label>
             <span class="jump-prefix">0x</span>
-            <input class="jump-input" :value="jumpText" maxlength="4" spellcheck="false"
-                @input="onJumpInput" @keydown.enter.prevent="doJump" @focus="onJumpFocus" placeholder="0000" />
+            <input class="jump-input" :value="jumpText" maxlength="4" spellcheck="false" @input="onJumpInput"
+                @keydown.enter.prevent="doJump" @focus="onJumpFocus" placeholder="0000" />
             <button class="nav-btn" @click="doJump">Go</button>
             <button class="nav-btn" @click="scrollToAddress(pc)">Go to PC</button>
             <button class="nav-btn" @click="scrollToAddress(sp)">Go to SP</button>
@@ -19,8 +19,8 @@
                         <span v-if="i === 8" class="hex-mid-gap" />
                         <template v-if="editingAddr === row.baseAddr + i">
                             <input ref="editInputs" class="hex-input" :value="editText" maxlength="2" spellcheck="false"
-                                @input="onEditInput" @keydown.enter.prevent="commitEdit"
-                                @keydown.escape="cancelEdit" @blur="commitEdit" />
+                                @input="onEditInput" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit"
+                                @blur="commitEdit" />
                         </template>
                         <span v-else class="hex-byte" :class="byteClass(row.baseAddr + i, b)"
                             @click="beginEdit(row.baseAddr + i, b)">
@@ -30,17 +30,14 @@
                     <span class="hex-ascii-sep">│</span>
                     <span class="hex-ascii">
                         <span v-for="(b, i) in row.bytes" :key="i" class="ascii-char"
-                            :class="{ dim: shouldDimAscii(b) }">{{ toAscii(b) }}</span>
+                            :class="{ dim: shouldDimAscii(b) }">{{ toAscii(b)
+                            }}</span>
                     </span>
                 </div>
                 <div class="hex-spacer" :style="{ height: bottomSpacer + 'px' }" />
             </div>
             <div ref="minimapWrap" class="minimap-wrap" @scroll="paintMinimap">
-                <canvas
-                    ref="minimapCanvas"
-                    class="minimap-canvas"
-                    @click="onMinimapClick"
-                />
+                <canvas ref="minimapCanvas" class="minimap-canvas" @click="onMinimapClick" />
             </div>
         </div>
     </div>
@@ -334,6 +331,7 @@ function paintMinimap() {
 }
 
 function paintOverlays(ctx: CanvasRenderingContext2D, hmW: number, hmH: number) {
+    const bytesPerRow = HEATMAP_W;
     const sx = hmW / HEATMAP_W;
     const sy = hmH / HEATMAP_H;
 
@@ -342,9 +340,9 @@ function paintOverlays(ctx: CanvasRenderingContext2D, hmW: number, hmH: number) 
     ctx.font = `5.5px monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    const LABEL_STEP = 0x0400; // label every 1K
+    const LABEL_STEP = 0x0400; // every 1K
     for (let addr = 0; addr < 0x10000; addr += LABEL_STEP) {
-        const y = (addr / HEATMAP_W) * sy;
+        const y = (addr / bytesPerRow) * sy;
         if (y > hmH) break;
         const label = addr.toString(16).toUpperCase().padStart(4, '0');
         ctx.fillText(label, hmW + 2, y);
@@ -359,22 +357,22 @@ function paintOverlays(ctx: CanvasRenderingContext2D, hmW: number, hmH: number) 
     ctx.stroke();
 
     // Viewport highlight (rendered area)
-    const vrY0 = (firstRenderRow.value * BYTES_PER_ROW) / HEATMAP_W * sy;
-    const vrY1 = ((lastRenderRow.value + 1) * BYTES_PER_ROW) / HEATMAP_W * sy;
+    const vrY0 = (firstRenderRow.value * BYTES_PER_ROW) / bytesPerRow * sy;
+    const vrY1 = ((lastRenderRow.value + 1) * BYTES_PER_ROW) / bytesPerRow * sy;
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.fillRect(0, vrY0, hmW, vrY1 - vrY0);
 
     // Viewport outline (visible area without overscan)
-    const vpY0 = (startRow.value * BYTES_PER_ROW) / HEATMAP_W * sy;
-    const vpY1 = Math.min(((startRow.value + visibleCount.value) * BYTES_PER_ROW) / HEATMAP_W * sy, hmH);
+    const vpY0 = (startRow.value * BYTES_PER_ROW) / bytesPerRow * sy;
+    const vpY1 = Math.min(((startRow.value + visibleCount.value) * BYTES_PER_ROW) / bytesPerRow * sy, hmH);
     ctx.strokeStyle = 'rgba(255,255,255,0.4)';
     ctx.lineWidth = 1;
     ctx.strokeRect(0.5, vpY0 + 0.5, hmW - 1, Math.max(1, vpY1 - vpY0 - 1));
 
     // ── PC highlight row + dot ──
     const pcAddr = props.pc & 0xFFFF;
-    const pcX = (pcAddr % HEATMAP_W) * sx;
-    const pcY = Math.floor(pcAddr / HEATMAP_W) * sy;
+    const pcX = (pcAddr % bytesPerRow) * sx;
+    const pcY = Math.floor(pcAddr / bytesPerRow) * sy;
     const pcH = Math.max(1, sy);
     ctx.fillStyle = 'rgba(100,200,255,0.30)';
     ctx.fillRect(0, pcY, hmW, pcH);
@@ -383,8 +381,8 @@ function paintOverlays(ctx: CanvasRenderingContext2D, hmW: number, hmH: number) 
 
     // ── SP highlight row + dot ──
     const spAddr = props.sp & 0xFFFF;
-    const spX = (spAddr % HEATMAP_W) * sx;
-    const spY = Math.floor(spAddr / HEATMAP_W) * sy;
+    const spX = (spAddr % bytesPerRow) * sx;
+    const spY = Math.floor(spAddr / bytesPerRow) * sy;
     const spH = Math.max(1, sy);
     ctx.fillStyle = 'rgba(255,153,0,0.25)';
     ctx.fillRect(0, spY, hmW, spH);
@@ -400,7 +398,7 @@ function onMinimapClick(e: MouseEvent) {
     if (hmW <= 0) return;
     const xCss = e.clientX - rect.left;
     const yCss = e.clientY - rect.top;
-    if (xCss >= hmW) return; // click in label area
+    if (xCss >= hmW) return;
     const x = Math.floor(xCss / hmW * HEATMAP_W);
     const y = Math.floor(yCss / rect.height * HEATMAP_H);
     if (x < 0 || x >= HEATMAP_W || y < 0 || y >= HEATMAP_H) return;
@@ -517,14 +515,16 @@ onUnmounted(() => {
     display: flex;
     gap: 0.25rem;
     min-height: 0;
+    min-width: 0;
 }
 
 // ── Hex rows ──
 
 .hex-container {
-    flex: 1;
+    flex-shrink: 0;
+    max-width: 100%;
     min-width: 0;
-    overflow-y: auto;
+    overflow: auto;
     min-height: 12rem;
     max-height: 40vh;
     border: 1px solid var(--border);
@@ -532,11 +532,6 @@ onUnmounted(() => {
     font-family: var(--mono);
     font-size: 0.6rem;
     line-height: 1.2rem;
-    contain: layout style paint;
-}
-
-.hex-spacer {
-    contain: layout style paint;
 }
 
 .hex-row {
@@ -545,7 +540,6 @@ onUnmounted(() => {
     padding: 0 0.3rem;
     white-space: nowrap;
     line-height: 1.2rem;
-    contain: layout style;
 
     &.pc-row {
         background: color-mix(in srgb, var(--accent) 12%, transparent);
@@ -656,7 +650,8 @@ onUnmounted(() => {
 // ── Minimap ──
 
 .minimap-wrap {
-    flex-shrink: 0;
+    flex: 1;
+    min-width: 0;
     align-self: stretch;
     aspect-ratio: 1;
     max-height: 40vh;
@@ -664,6 +659,10 @@ onUnmounted(() => {
     border: 1px solid var(--border);
     border-radius: 3px;
     cursor: crosshair;
+
+    @media (max-width: 720px) {
+        display: none;
+    }
 }
 
 .minimap-canvas {
