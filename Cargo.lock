@@ -209,6 +209,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasm-i8080"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde-wasm-bindgen",
+ "sexp",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "wasm-lambda"
 version = "0.1.0"
 dependencies = [

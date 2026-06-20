@@ -194,6 +194,7 @@ function clearStack() {
 .result-inner {
     padding-top: var(--padding-safe);
     padding-bottom: var(--padding-safe);
+    padding-inline: var(--padding-safe);
 }
 
 .live-term {

@@ -1,0 +1,6 @@
+{
+    "name": "@sewing-box/wasm-i8080",
+    "type": "module",
+    "main": "./pkg/wasm_i8080.js",
+    "types": "./pkg/wasm_i8080.d.ts"
+}

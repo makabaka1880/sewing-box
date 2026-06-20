@@ -23,6 +23,9 @@ importers:
       '@sewing-box/wasm-brainfuck':
         specifier: workspace:*
         version: link:../wasm-brainfuck
+      '@sewing-box/wasm-i8080':
+        specifier: workspace:*
+        version: link:../wasm-i8080
       '@sewing-box/wasm-lambda':
         specifier: workspace:*
         version: link:../wasm-lambda
@@ -86,6 +89,8 @@ importers:
         version: 3.3.5(typescript@6.0.3)
 
   packages/wasm-brainfuck: {}
+
+  packages/wasm-i8080: {}
 
   packages/wasm-lambda: {}
 

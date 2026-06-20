@@ -159,6 +159,7 @@ function clearStack() {
 
 .result-inner {
     padding-bottom: var(--padding-safe);
+    padding-inline: var(--padding-safe);
 }
 
 .tree-stack {

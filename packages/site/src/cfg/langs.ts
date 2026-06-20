@@ -65,6 +65,54 @@ export const profiles: LangProfile[] = [
         `
     },
     {
+        name: "Lite80",
+        description: "A small S-expression–based assembly DSL for the Intel 8080. Write symbolic instructions, get a memory image.",
+        grammar: [
+            {
+                nonterminal: "program",
+                produces: ["(block addr item ...) ..."],
+            },
+            {
+                nonterminal: "addr",
+                produces: ["hex literal", "decimal integer"],
+            },
+            {
+                nonterminal: "item",
+                produces: ["instr", "(db byte ...)"],
+            },
+            {
+                nonterminal: "instr",
+                produces: ["(mnemonic operand ...)"],
+            },
+            {
+                nonterminal: "mnemonic",
+                produces: ["mov", "mvi", "lxi", "lda", "sta", "add", "adi", "sub", "inr", "dcr", "inx", "dcx", "jmp", "jcond", "call", "ret", "push", "pop", "hlt", "nop", "…"],
+            },
+            {
+                nonterminal: "operand",
+                produces: ["register", "hex literal", "character literal", "condition code"],
+            },
+            {
+                nonterminal: "register",
+                produces: ["A", "B", "C", "D", "E", "H", "L", "M"],
+            },
+            {
+                nonterminal: "byte",
+                produces: ["hex byte", "decimal byte", "'c'"],
+            },
+        ],
+        sample: `(block 0100h
+  (lxi SP 0F000h)
+  (mvi A '>')
+  (out 01h)
+  (mvi A 20h)
+  (out 01h)
+  (hlt))
+
+(block 0200h
+  (db 'H' 'e' 'l' 'l' 'o' 0Ah 00h))`,
+    },
+    {
         name: "Brainfuck",
         description: "An esoteric, Turing-complete language with an 8-instruction pointer-based tape machine. Minimal syntax, maximal confusion.",
         grammar: [
@@ -77,7 +125,18 @@ export const profiles: LangProfile[] = [
                 produces: ["instr ..."]
             }
         ],
-        sample: `++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.`
+        sample: `>++++++++[<+++++++++>-]<.
+>++++[<+++++++>-]<+.
++++++++..
++++.
+>>++++++[<+++++++>-]<++.
+------------.
+>++++++[<+++++++++>-]<+.
+<.
++++.
+------.
+--------.
+>>>++++[<++++++++>-]<+.`
     }
 ]
 

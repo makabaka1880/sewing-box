@@ -7,12 +7,6 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-
-const route = useRoute();
-const parts = route.fullPath;
-console.log(parts)
 
 </script>
 

@@ -1,0 +1,181 @@
+// Created by Sean L. on Jun. 20.
+// Last Updated by Sean L. on Jun. 20.
+//
+// sewing-box
+// packages/wasm-i8080/src/main.rs
+//
+// Makabaka1880, 2026. All rights reserved.
+
+use std::io::{self, BufRead, Write};
+use wasm_i8080::machine::I8080;
+use wasm_i8080::parser::parse;
+
+const R: [&str; 8] = ["B", "C", "D", "E", "H", "L", "F", "A"];
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 3 {
+        eprintln!("usage: {} <source-file> <pc> <sp>", args[0]);
+        eprintln!("  e.g. {} program.asm 0100h F000h", args[0]);
+        std::process::exit(1);
+    }
+
+    let src = match std::fs::read_to_string(&args[1]) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("read {}: {}", args[1], e);
+            std::process::exit(1);
+        }
+    };
+
+    let pc = parse_hex(&args[2]);
+    let sp = parse_hex(&args[3]);
+    let io_bus = vec![0u8; 256];
+
+    let blocks = match parse(&src) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("parse error: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let mut machine = match I8080::assemble(blocks, io_bus, pc, sp) {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("assemble error: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let stdin = io::stdin();
+    let mut lines = stdin.lock().lines();
+
+    println!(
+        "assembled. pc={:04X} sp={:04X}. commands: s, r, q, d, m [addr]",
+        pc, sp
+    );
+
+    loop {
+        print!("> ");
+        io::stdout().flush().unwrap();
+
+        let line = match lines.next() {
+            Some(Ok(l)) => l,
+            _ => break,
+        };
+        let cmd = line.trim();
+
+        match cmd {
+            "" => {}
+            "q" | "quit" => break,
+            "d" | "dump" => dump_regs(&machine),
+            "s" | "step" => match machine.step() {
+                Ok(true) => {
+                    println!("  [HLT]");
+                    dump_regs(&machine);
+                }
+                Ok(false) => {
+                    dump_regs(&machine);
+                    println!("  {}", machine.disasm_at(machine.pc));
+                }
+                Err(e) => eprintln!("  error: {}", e),
+            },
+            "r" | "run" => {
+                let mut count = 0;
+                loop {
+                    match machine.step() {
+                        Ok(true) => {
+                            println!("[HLT after {} steps]", count + 1);
+                            dump_regs(&machine);
+                            break;
+                        }
+                        Ok(false) => {
+                            count += 1;
+                        }
+                        Err(e) => {
+                            eprintln!("error at step {}: {}", count + 1, e);
+                            break;
+                        }
+                    }
+                }
+            }
+            _ if cmd.starts_with("m ") || cmd.starts_with("mem ") => {
+                let addr_part = cmd.split_whitespace().nth(1).unwrap_or("0");
+                let addr = parse_hex(addr_part) & 0xFFF0; // align to 16
+                dump_memory(&machine, addr, 8);
+            }
+            _ => {
+                // try as hex address for memory dump
+                let addr = parse_hex(cmd) & 0xFFF0;
+                dump_memory(&machine, addr, 8);
+            }
+        }
+    }
+
+    // final state
+    println!();
+    dump_regs(&machine);
+    println!();
+    dump_memory(&machine, machine.pc & 0xFFF0, 4);
+}
+
+fn parse_hex(s: &str) -> u16 {
+    let s = s.trim_end_matches(|c| c == 'h' || c == 'H');
+    u16::from_str_radix(s, 16).unwrap_or_else(|_| {
+        eprintln!("invalid hex: {}", s);
+        std::process::exit(1);
+    })
+}
+
+fn dump_regs(m: &I8080) {
+    print!("A={:02X} ", m.regs[7]);
+    for i in 0..6 {
+        print!("{}= {:02X} ", R[i], m.regs[i]);
+    }
+    let f = m.regs[6];
+    println!(
+        "F={:02X} [{}]  PC={:04X}  SP={:04X}",
+        f,
+        flags_str(f),
+        m.pc,
+        m.sp,
+    );
+}
+
+fn flags_str(f: u8) -> String {
+    let s = if f & 0x80 != 0 { "S" } else { "-" };
+    let z = if f & 0x40 != 0 { "Z" } else { "-" };
+    let ac = if f & 0x10 != 0 { "A" } else { "-" };
+    let p = if f & 0x04 != 0 { "P" } else { "-" };
+    let c = if f & 0x01 != 0 { "C" } else { "-" };
+    format!("{}{}{}{}{}", s, z, ac, p, c)
+}
+
+fn dump_memory(m: &I8080, start: u16, rows: u16) {
+    for row in 0..rows {
+        let addr = start + row * 16;
+        print!("{:04X} │", addr);
+        for col in 0..16 {
+            let a = addr + col;
+            let byte = m.mem[a as usize];
+            if a == m.pc {
+                print!("\x1b[7m{:02X}\x1b[0m ", byte);
+            } else if a == m.sp {
+                print!("\x1b[4m{:02X}\x1b[0m ", byte);
+            } else {
+                print!("{:02X} ", byte);
+            }
+        }
+        print!("│");
+        for col in 0..16 {
+            let byte = m.mem[(addr + col) as usize];
+            let ch = if (0x20..=0x7E).contains(&byte) {
+                byte as char
+            } else {
+                '.'
+            };
+            print!("{}", ch);
+        }
+        println!("│");
+    }
+}

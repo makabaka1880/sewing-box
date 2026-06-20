@@ -1,13 +1,13 @@
 <template>
     <main>
-        <div>
+        <section>
             <h1>Welcome</h1>
             <p>Welcome to Sewing Box, a collection of simple interpreters and their debuggers.</p>
             <div class="buttons">
                 <button class="primary" @click="goRandomLanguage">Random Language -></button>
                 <button class="secondary" @click="goLang">All Languages -></button>
             </div>
-        </div>
+        </section>
     </main>
 </template>
 
@@ -35,6 +35,7 @@ main {
     display: flex;
     flex-direction: column;
     justify-content: space-around;
+    align-items: center;
 }
 
 .buttons {
