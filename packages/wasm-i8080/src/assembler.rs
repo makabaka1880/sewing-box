@@ -20,8 +20,14 @@ impl I8080 {
             let end = block.content.iter().try_fold(start, |acc, item| {
                 let size = match item {
                     crate::parser::Data::Code(instr) => instr.byte_size() as u16,
-                    crate::parser::Data::Bytes(items) => u16::try_from(items.len())
-                        .map_err(|_| format!("byte literal exceeds u16 address space: {} bytes", items.len()))?,
+                    crate::parser::Data::Bytes(items) => {
+                        u16::try_from(items.len()).map_err(|_| {
+                            format!(
+                                "byte literal exceeds u16 address space: {} bytes",
+                                items.len()
+                            )
+                        })?
+                    }
                 };
                 acc.checked_add(size)
                     .ok_or_else(|| format!("block at 0x{start:04X} overflows u16 address space"))

@@ -20,7 +20,18 @@ pub enum Data {
 }
 
 pub fn parse(src: &str) -> Result<Vec<Block>, String> {
-    let wrapped = format!("({})", src);
+    let stripped = src
+        .lines()
+        .map(|line| {
+            if let Some(pos) = line.find(';') {
+                &line[..pos]
+            } else {
+                line
+            }
+        })
+        .collect::<Vec<&str>>()
+        .join("\n");
+    let wrapped = format!("({})", stripped);
     let sexp = sexp::parse(&wrapped).map_err(|e| e.to_string())?;
     match sexp {
         Sexp::List(items) => items.into_iter().map(parse_block).collect(),
