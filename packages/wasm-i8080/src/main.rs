@@ -6,11 +6,21 @@
 //
 // Makabaka1880, 2026. All rights reserved.
 
+// First of all this main.rs is just a debugger I let claude code write for convenience. I have absolutely no guarantee for the correctness or usablilty of anything in main.rs. 
+
 use std::io::{self, BufRead, Write};
 use wasm_i8080::machine::I8080;
 use wasm_i8080::parser::parse;
 
 const R: [&str; 8] = ["B", "C", "D", "E", "H", "L", "F", "A"];
+
+struct PortEvent {
+    step: u64,
+    pc: u16,
+    addr: u8,
+    val: u8,
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 3 {
@@ -50,8 +60,11 @@ fn main() {
     let stdin = io::stdin();
     let mut lines = stdin.lock().lines();
 
+    let mut port_history: Vec<PortEvent> = Vec::new();
+    let mut step_count: u64 = 0;
+
     println!(
-        "assembled. pc={:04X} sp={:04X}. commands: s, r, q, d, m [addr]",
+        "assembled. pc={:04X} sp={:04X}. commands: s, r, p, h, q, d, m [addr]",
         pc, sp
     );
 
@@ -69,30 +82,57 @@ fn main() {
             "" => {}
             "q" | "quit" => break,
             "d" | "dump" => dump_regs(&machine),
-            "s" | "step" => match machine.step() {
-                Ok(true) => {
-                    println!("  [HLT]");
-                    dump_regs(&machine);
+            "p" | "ports" => dump_ports(&machine),
+            "h" | "hist" | "history" => dump_port_history(&port_history),
+            "s" | "step" => {
+                let is_out = machine.disasm_at(machine.pc).starts_with("(out");
+                let prev_ports = if is_out { machine.ports } else { [0; 256] };
+                let prev_pc = machine.pc;
+                match machine.step() {
+                    Ok(true) => {
+                        step_count += 1;
+                        if is_out {
+                            record_ports(&mut port_history, step_count, prev_pc, &prev_ports, &machine);
+                        }
+                        println!("  [HLT]");
+                        dump_regs(&machine);
+                    }
+                    Ok(false) => {
+                        step_count += 1;
+                        if is_out {
+                            record_ports(&mut port_history, step_count, prev_pc, &prev_ports, &machine);
+                        }
+                        dump_regs(&machine);
+                        println!("  {}", machine.disasm_at(machine.pc));
+                    }
+                    Err(e) => eprintln!("  error: {}", e),
                 }
-                Ok(false) => {
-                    dump_regs(&machine);
-                    println!("  {}", machine.disasm_at(machine.pc));
-                }
-                Err(e) => eprintln!("  error: {}", e),
-            },
+            }
             "r" | "run" => {
-                let mut count = 0;
+                let mut count: u64 = 0;
                 loop {
+                    let is_out = machine.disasm_at(machine.pc).starts_with("(out");
+                    let prev_ports = if is_out { machine.ports } else { [0; 256] };
+                    let prev_pc = machine.pc;
                     match machine.step() {
                         Ok(true) => {
-                            println!("[HLT after {} steps]", count + 1);
+                            count += 1;
+                            if is_out {
+                                record_ports(&mut port_history, step_count + count, prev_pc, &prev_ports, &machine);
+                            }
+                            step_count += count;
+                            println!("  [HLT after {} steps]", count);
                             dump_regs(&machine);
                             break;
                         }
                         Ok(false) => {
                             count += 1;
+                            if is_out {
+                                record_ports(&mut port_history, step_count + count, prev_pc, &prev_ports, &machine);
+                            }
                         }
                         Err(e) => {
+                            step_count += count;
                             eprintln!("error at step {}: {}", count + 1, e);
                             break;
                         }
@@ -149,6 +189,74 @@ fn flags_str(f: u8) -> String {
     let p = if f & 0x04 != 0 { "P" } else { "-" };
     let c = if f & 0x01 != 0 { "C" } else { "-" };
     format!("{}{}{}{}{}", s, z, ac, p, c)
+}
+
+fn record_ports(
+    history: &mut Vec<PortEvent>,
+    step: u64,
+    pc: u16,
+    prev: &[u8; 256],
+    m: &I8080,
+) {
+    for addr in 0..256u16 {
+        let a = addr as u8;
+        let port = a as usize;
+        if m.ports[port] != prev[port] {
+            let ch = if (0x20..=0x7E).contains(&m.ports[port]) {
+                m.ports[port] as char
+            } else {
+                '·'
+            };
+            println!(
+                "  OUT {:02X} -> {:02X} {}  (step {})",
+                a, m.ports[port], ch, step
+            );
+            history.push(PortEvent {
+                step,
+                pc,
+                addr: a,
+                val: m.ports[port],
+            });
+        }
+    }
+}
+
+fn dump_port_history(history: &[PortEvent]) {
+    if history.is_empty() {
+        println!("  (no output yet)");
+        return;
+    }
+    println!("  {:>6} {:>5} {:>5} {:>4} CHAR", "step", "PC", "PORT", "VAL");
+    println!("  {} {} {} {} ----", "-----", "-----", "-----", "----");
+    for e in history {
+        let ch = if (0x20..=0x7E).contains(&e.val) {
+            e.val as char
+        } else {
+            '·'
+        };
+        println!(
+            "  {:>6} {:04X}  {:02X}   {:02X}  {}",
+            e.step, e.pc, e.addr, e.val, ch
+        );
+    }
+}
+
+fn dump_ports(m: &I8080) {
+    let mut shown = 0;
+    for (addr, &val) in m.ports.iter().enumerate() {
+        if val != 0 {
+            let ch = if (0x20..=0x7E).contains(&val) {
+                val as char
+            } else {
+                '·'
+            };
+            println!("  {:02X}: {:02X} {}", addr, val, ch);
+            shown += 1;
+        }
+    }
+    if shown == 0 {
+        println!("  (all zero)");
+    }
 }
 
 fn dump_memory(m: &I8080, start: u16, rows: u16) {

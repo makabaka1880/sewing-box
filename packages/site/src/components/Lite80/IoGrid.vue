@@ -12,12 +12,14 @@
                 :style="{ '--intensity': (cell.val / 255) }" @click="beginEdit(cell.addr)"
                 @mouseenter="showHistory(cell.addr, $event)" @mouseleave="hideHistory">
                 <span class="cell-addr">{{ fmtHex(cell.addr, 2) }}</span>
-                <span v-if="editingAddr !== cell.addr" class="cell-val">{{ fmtHex(cell.val, 2) }} <span class="cell-chr">{{ toChar(cell.val) }}</span></span>
+                <span v-if="editingAddr !== cell.addr" class="cell-val">{{ fmtHex(cell.val, 2) }} <span
+                        class="cell-chr">{{ toChar(cell.val) }}</span></span>
                 <input v-else ref="editInput" class="cell-input" :value="editText" maxlength="2" spellcheck="false"
                     @input="onInput" @keydown.enter="commitEdit" @keydown.escape="cancelEdit" @blur="commitEdit" />
             </div>
         </div>
-        <div v-if="hoveredAddr !== null" class="history-popover" :style="popoverStyle">
+        <div v-if="hoveredAddr !== null" class="history-popover" :style="popoverStyle"
+            @mouseenter="hoverKeep = true" @mouseleave="hoverKeep = false; hideHistory()">
             <div class="history-title">{{ fmtHex(hoveredAddr, 2) }}</div>
             <div class="history-header-row">
                 <span class="hdr-step">#</span>
@@ -36,13 +38,9 @@
             </div>
         </div>
         <div class="io-dots">
-            <button
-                v-for="p in PAGE_COUNT" :key="p"
-                class="io-dot"
-                :class="{ active: page === p - 1 }"
+            <button v-for="p in PAGE_COUNT" :key="p" class="io-dot" :class="{ active: page === p - 1 }"
                 :title="`page ${p} — ${fmtHex((p - 1) * CELLS_PER_PAGE, 2)}–${fmtHex(p * CELLS_PER_PAGE - 1, 2)}`"
-                @click="page = p - 1"
-            >{{ p }}</button>
+                @click="page = p - 1">{{ p }}</button>
         </div>
     </div>
 </template>
@@ -73,6 +71,7 @@ const editingAddr = ref<number | null>(null);
 const editText = ref('');
 const editInput = ref<HTMLInputElement | null>(null);
 const hoveredAddr = ref<number | null>(null);
+const hoverKeep = ref(false);
 const popoverPos = ref({ x: 0, y: 0 });
 
 const base = computed(() => page.value * CELLS_PER_PAGE);
@@ -103,6 +102,7 @@ function showHistory(addr: number, e: MouseEvent) {
 }
 
 function hideHistory() {
+    if (editingAddr.value !== null || hoverKeep.value) return;
     hoveredAddr.value = null;
 }
 
@@ -127,6 +127,7 @@ function onInput(e: Event) {
 
 function beginEdit(addr: number) {
     editingAddr.value = addr;
+    hoveredAddr.value = addr;
     editText.value = fmtHex(props.modelValue[addr] ?? 0, 2);
     nextTick(() => {
         const el = Array.isArray(editInput.value) ? editInput.value[0] : editInput.value;
@@ -146,6 +147,7 @@ function clearPage() {
 
 function cancelEdit() {
     editingAddr.value = null;
+    hoveredAddr.value = null;
     editText.value = '';
 }
 
@@ -160,6 +162,7 @@ function commitEdit() {
         emit('update:modelValue', next);
     }
     editingAddr.value = null;
+    hoveredAddr.value = null;
     editText.value = '';
 }
 </script>
@@ -290,7 +293,6 @@ function commitEdit() {
     border-radius: 4px;
     padding: 0.3rem 0.4rem;
     min-width: 7rem;
-    pointer-events: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     max-height: 12rem;
     overflow-y: auto;
@@ -307,7 +309,8 @@ function commitEdit() {
 }
 
 .history-header-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1.6rem 2.0rem 1.2rem 0.6rem;
     gap: 0.3rem;
     font-family: var(--mono);
     font-size: 0.42rem;
@@ -318,10 +321,10 @@ function commitEdit() {
     border-bottom: 1px solid var(--border);
 }
 
-.hdr-step { min-width: 1.6rem; text-align: right; }
-.hdr-pc  { min-width: 2.0rem; text-align: right; }
-.hdr-val { min-width: 1.2rem; text-align: right; }
-.hdr-chr { min-width: 0.6rem; text-align: center; }
+.hdr-step { text-align: right; }
+.hdr-pc   { text-align: right; }
+.hdr-val  { text-align: right; }
+.hdr-chr  { text-align: right; }
 
 .history-entries {
     display: flex;
@@ -330,16 +333,17 @@ function commitEdit() {
 }
 
 .history-entry {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1.6rem 2.0rem 1.2rem 0.6rem;
     gap: 0.3rem;
     font-family: var(--mono);
     font-size: 0.48rem;
 }
 
-.hist-step { min-width: 1.6rem; text-align: right; color: var(--accent); }
-.hist-pc  { min-width: 2.0rem; text-align: right; color: var(--text-muted); }
-.hist-val { min-width: 1.2rem; text-align: right; color: var(--text); }
-.hist-chr { min-width: 0.6rem; text-align: center; color: var(--text-muted); opacity: 0.6; }
+.hist-step { text-align: right; color: var(--accent); }
+.hist-pc   { text-align: right; color: var(--text-muted); }
+.hist-val  { text-align: right; color: var(--text); }
+.hist-chr  { text-align: right; color: var(--text-muted); opacity: 0.6; }
 
 .history-empty {
     font-family: var(--mono);
