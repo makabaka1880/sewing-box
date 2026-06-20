@@ -102,15 +102,23 @@ export const profiles: LangProfile[] = [
             },
         ],
         sample: `(block 0100h
-  (lxi SP 0F000h)
-  (mvi A '>')
-  (out 01h)
-  (mvi A 20h)
-  (out 01h)
-  (hlt))
+    (lxi H 0400h)
+    (call 0200h)
+    (hlt))
 
 (block 0200h
-  (db 'H' 'e' 'l' 'l' 'o' 0Ah 00h))`,
+    (mov A M)
+    (cpi 00h)
+    (jz 0300h)
+    (out 01h)
+    (inx h)
+    (jmp 0200h))
+
+(block 0300h
+    (ret))
+
+(block 0400h
+    (db 'h' 'e' 'l' 'l' 'o' 20h 'w' 'o' 'r' 'l' 'd' 00h))`,
     },
     {
         name: "Brainfuck",
