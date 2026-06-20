@@ -131,6 +131,22 @@ impl I8080Wasm {
     }
 
     #[wasm_bindgen]
+    pub fn memory_read_byte(&self, addr: usize) -> u8 {
+        if addr < 0x10000 {
+            self.inner.mem[addr]
+        } else {
+            0
+        }
+    }
+
+    #[wasm_bindgen]
+    pub fn memory_write_byte(&mut self, addr: usize, value: u8) {
+        if addr < 0x10000 {
+            self.inner.mem[addr] = value;
+        }
+    }
+
+    #[wasm_bindgen]
     pub fn get_memory_ptr(&self) -> *const u8 {
         self.inner.mem.as_ptr()
     }

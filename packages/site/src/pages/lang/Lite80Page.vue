@@ -21,6 +21,18 @@
             <CodeMirror v-model="code" />
         </template>
 
+        <template #editor-below>
+            <section class="config" :class="{ collapsed: !memOpen }">
+                <button class="section-header config-toggle" @click="memOpen = !memOpen">
+                    Memory
+                    <span class="toggle-arrow" :class="{ open: memOpen }">&#x25B8;</span>
+                </button>
+                <div v-show="memOpen" class="config-body">
+                    <MemView :memory="memory" :pc="pc" :sp="sp" @edit-byte="onMemEdit" />
+                </div>
+            </section>
+        </template>
+
         <template #result-label>MACHINE</template>
 
         <template #result-header>
@@ -54,7 +66,7 @@
 </template>
 
 <script lang="ts" setup>
-import { inject, ref, watch } from 'vue';
+import { inject, shallowRef, ref, watch } from 'vue';
 import { getLang, getGrammar, generateEBNF, getSample } from '@/cfg/langs';
 import { useEditorStore } from '@/stores/editor';
 import PlaygroundLayout from '@/components/PlaygroundLayout.vue';
@@ -62,6 +74,7 @@ import CodeMirror from '@/components/CodeMirror.vue';
 import IoGrid, { type HistoryEntry } from '@/components/Lite80/IoGrid.vue';
 import RegsCard from '@/components/Lite80/RegsCard.vue';
 import { I8080Wasm } from "@sewing-box/wasm-i8080";
+import MemView from '@/components/Lite80/MemView.vue';
 
 const store = useEditorStore();
 const grammarModal = inject<{ show: boolean; content: string }>('grammarModal')!;
@@ -88,6 +101,8 @@ const curBytes = ref('');
 const curBytesAddr = ref('');
 const portHistory = ref<Record<number, HistoryEntry[]>>({});
 const MAX_HISTORY = 40;
+const memory = shallowRef<Uint8Array>(new Uint8Array(65536));
+const memOpen = ref(true);
 
 function pushPortHistory(addr: number, entry: HistoryEntry) {
     if (!portHistory.value[addr]) portHistory.value[addr] = [];
@@ -116,6 +131,18 @@ function syncState() {
     ioBus.value = Array.from(program.value.ports());
     intEnabled.value = program.value.int_enabled();
     syncAsm();
+    syncMemory();
+}
+
+function syncMemory() {
+    if (!program.value) return;
+    memory.value = program.value.memory_slice(0, 0x10000);
+}
+
+function onMemEdit(addr: number, value: number) {
+    if (!program.value) return;
+    program.value.memory_write_byte(addr, value);
+    memory.value = program.value.memory_slice(0, 0x10000);
 }
 
 function onPcChange(val: number) {

@@ -17,6 +17,7 @@
                     </div>
                     <slot name="editor" />
                 </div>
+                <slot name="editor-below" />
             </div>
             <div class="panel">
                 <div class="panel-header">
