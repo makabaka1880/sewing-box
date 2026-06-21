@@ -13,8 +13,9 @@
 
         <template #editor-tools>
             <button class="secondary" title="Assemble" @click="doAssemble">ASSEMBLE &#9874; </button>
-            <button class="primary" title="Step" @click="doStep" :disabled="!program || halted">STEP &#x2192;</button>
-            <button class="secondary" title="Run" @click="doRun" :disabled="!program || halted">RUN &#x21D3;</button>
+            <button class="primary" title="Step" @click="doStep" :disabled="!program || halted || running">STEP &#x2192;</button>
+            <button v-if="!running" class="secondary" title="Run" @click="doRun" :disabled="!program || halted">RUN &#x21D3;</button>
+            <button v-else class="secondary" title="Stop" @click="doStop">STOP &#x25A0;</button>
         </template>
 
         <template #editor>
@@ -66,7 +67,7 @@
 </template>
 
 <script lang="ts" setup>
-import { inject, shallowRef, ref, watch } from 'vue';
+import { inject, shallowRef, ref, watch, onUnmounted } from 'vue';
 import { getLang, getGrammar, generateEBNF, getSample } from '@/cfg/langs';
 import { useEditorStore } from '@/stores/editor';
 import PlaygroundLayout from '@/components/PlaygroundLayout.vue';
@@ -96,6 +97,8 @@ const program = ref<I8080Wasm | null>(null);
 const errorMsg = ref('');
 const steps = ref(0);
 const halted = ref(false);
+const running = ref(false);
+let runTimer: ReturnType<typeof setInterval> | null = null;
 const curAsm = ref('');
 const curBytes = ref('');
 const curBytesAddr = ref('');
@@ -206,37 +209,61 @@ function doStep() {
     }
 }
 
-const MAX_RUN = 40960;
+function runOneStep(): boolean {
+    if (!program.value || halted.value) {
+        stopRunning();
+        return true;
+    }
+    try {
+        const prevPc = program.value.pc();
+        const isOut = program.value.disasm().startsWith('(out');
+        const done = program.value.step();
+        steps.value++;
+        if (isOut) {
+            const curPorts = Array.from(program.value.ports());
+            for (let addr = 0; addr < curPorts.length; addr++) {
+                pushPortHistory(addr, { step: steps.value, pc: prevPc, val: curPorts[addr]! });
+            }
+        }
+        syncState();
+        if (done) {
+            halted.value = true;
+            stopRunning();
+            return true;
+        }
+    } catch (e) {
+        errorMsg.value = String(e);
+        syncState();
+        stopRunning();
+        return true;
+    }
+    return false;
+}
 
 function doRun() {
-    if (!program.value || halted.value) return;
+    if (!program.value || halted.value || running.value) return;
     errorMsg.value = '';
-    for (let i = 0; i < MAX_RUN; i++) {
-        try {
-            const prevPc = program.value.pc();
-            const isOut = program.value.disasm().startsWith('(out');
-            const done = program.value.step();
-            steps.value++;
-            if (isOut) {
-                const curPorts = Array.from(program.value.ports());
-                for (let addr = 0; addr < curPorts.length; addr++) {
-                    pushPortHistory(addr, { step: steps.value, pc: prevPc, val: curPorts[addr]! });
-                }
-            }
-            if (done) {
-                halted.value = true;
-                break;
-            }
-        } catch (e) {
-            errorMsg.value = String(e);
-            break;
-        }
-    }
-    syncState();
-    if (!halted.value && !errorMsg.value) {
-        errorMsg.value = `Terminated after ${MAX_RUN} steps (possible non-termination).`;
-    }
+    running.value = true;
+    runTimer = setInterval(() => {
+        runOneStep();
+    }, 10); // ~100 steps/second
 }
+
+function doStop() {
+    stopRunning();
+}
+
+function stopRunning() {
+    if (runTimer !== null) {
+        clearInterval(runTimer);
+        runTimer = null;
+    }
+    running.value = false;
+}
+
+onUnmounted(() => {
+    stopRunning();
+});
 </script>
 
 <style lang="scss" scoped>
