@@ -19,7 +19,6 @@ pub struct StateView {
     pub regs: [u8; 8],
     pub pc: u16,
     pub sp: u16,
-    pub is_halted: bool,
     pub int_enable: bool,
 }
 
@@ -59,12 +58,11 @@ impl I8080 {
         }
     }
 
-    pub fn state(&self, halted: bool) -> StateView {
+    pub fn state(&self) -> StateView {
         StateView {
             regs: self.regs,
             pc: self.pc,
             sp: self.sp,
-            is_halted: halted,
             int_enable: self.int_enable,
         }
     }

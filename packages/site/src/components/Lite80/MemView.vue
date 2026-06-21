@@ -1,13 +1,20 @@
 <template>
     <div class="mem-view">
         <div class="mem-toolbar">
-            <label class="jump-label">Addr:</label>
-            <span class="jump-prefix">0x</span>
-            <input class="jump-input" :value="jumpText" maxlength="4" spellcheck="false" @input="onJumpInput"
-                @keydown.enter.prevent="doJump" @focus="onJumpFocus" placeholder="0000" />
-            <button class="nav-btn" @click="doJump">Go</button>
-            <button class="nav-btn" @click="scrollToAddress(pc)">Go to PC</button>
-            <button class="nav-btn" @click="scrollToAddress(sp)">Go to SP</button>
+            <div class="left-tools">
+                <label class="jump-label">Addr:</label>
+                <span class="jump-prefix">0x</span>
+                <input class="jump-input" :value="jumpText" maxlength="4" spellcheck="false" @input="onJumpInput"
+                    @keydown.enter.prevent="doJump" @focus="onJumpFocus" placeholder="0000" />
+                <button class="nav-btn" @click="doJump">Go</button>
+                <button class="nav-btn" @click="scrollToAddress(pc)">Go to PC</button>
+                <button class="nav-btn" @click="scrollToAddress(sp)">Go to SP</button>
+            </div>
+            <div class="right-tools">
+                <button class="nav-btn" @click="dump">Dump RAM</button>
+                <button class="nav-btn" @click="emit('load-dump')">Load RAM</button>
+                <button class="nav-btn clear-btn" @click="emit('clear-mem')">Clr &cross;</button>
+            </div>
         </div>
         <div class="mem-body">
             <div ref="hexContainer" class="hex-container" @scroll="onHexScroll">
@@ -45,7 +52,6 @@
 
 <script lang="ts" setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
-
 const props = defineProps<{
     memory: Uint8Array;
     pc: number;
@@ -54,13 +60,15 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'edit-byte', addr: number, value: number): void;
+    (e: 'clear-mem'): void
+    (e: 'load-dump'): void
 }>();
 
 const BYTES_PER_ROW = 16;
 const TOTAL_ROWS = 65536 / BYTES_PER_ROW;
 const OVERSCAN = 20;
 
-// ── Row height measurement ──
+// MARK: Row height measurement
 
 const ROW_HEIGHT_PX = ref(19); // fallback default — measured on mount
 
@@ -74,7 +82,7 @@ function measureRowHeight() {
     if (h > 0) ROW_HEIGHT_PX.value = h;
 }
 
-// ── Viewport state ──
+// MARK: Viewport state
 
 const hexContainer = ref<HTMLDivElement | null>(null);
 const viewportTop = ref(0);
@@ -95,7 +103,7 @@ function onHexScroll() {
     updateViewport();
 }
 
-// ── Visible row range ──
+// MARK: Visible row range
 
 const startRow = computed(() => {
     if (ROW_HEIGHT_PX.value <= 0) return 0;
@@ -113,7 +121,7 @@ const lastRenderRow = computed(() => Math.min(TOTAL_ROWS - 1, startRow.value + v
 const topSpacer = computed(() => firstRenderRow.value * ROW_HEIGHT_PX.value);
 const bottomSpacer = computed(() => (TOTAL_ROWS - 1 - lastRenderRow.value) * ROW_HEIGHT_PX.value);
 
-// ── Visible rows ──
+// MARK: Visible rows
 
 interface MemRow {
     baseAddr: number;
@@ -166,7 +174,7 @@ function byteClass(addr: number, _value: number) {
     };
 }
 
-// ── Formatting helpers ──
+// MARK: Formatting helpers
 
 function fmtHex(n: number, width: number): string {
     return n.toString(16).toUpperCase().padStart(width, '0');
@@ -183,7 +191,7 @@ function shouldDimAscii(n: number): boolean {
     return n === 0 || n < 0x20 || n === 0x7F || n > 0x7E;
 }
 
-// ── Jump toolbar ──
+// MARK: Jump toolbar
 
 const jumpText = ref('');
 
@@ -213,7 +221,7 @@ function scrollToAddress(addr: number) {
     jumpText.value = '';
 }
 
-// ── Editing ──
+// MARK: Editing
 
 const editingAddr = ref<number | null>(null);
 const editText = ref('');
@@ -256,7 +264,7 @@ function cancelEdit() {
     editText.value = '';
 }
 
-// ── Minimap ──
+// MARK: Minimap
 
 const HEATMAP_W = 64; // logical heatmap grid width
 const HEATMAP_H = 1024; // logical heatmap grid height
@@ -335,7 +343,7 @@ function paintOverlays(ctx: CanvasRenderingContext2D, hmW: number, hmH: number) 
     const sx = hmW / HEATMAP_W;
     const sy = hmH / HEATMAP_H;
 
-    // ── Address labels (right side) ──
+    // MARK: Address labels
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#888';
     ctx.font = `5.5px monospace`;
     ctx.textAlign = 'left';
@@ -348,7 +356,7 @@ function paintOverlays(ctx: CanvasRenderingContext2D, hmW: number, hmH: number) 
         ctx.fillText(label, hmW + 2, y);
     }
 
-    // ── Vertical divider ──
+    // MARK: Vertical divider
     ctx.strokeStyle = 'rgba(255,255,255,0.12)';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
@@ -369,7 +377,7 @@ function paintOverlays(ctx: CanvasRenderingContext2D, hmW: number, hmH: number) 
     ctx.lineWidth = 1;
     ctx.strokeRect(0.5, vpY0 + 0.5, hmW - 1, Math.max(1, vpY1 - vpY0 - 1));
 
-    // ── PC highlight row + dot ──
+    // MARK: PC highlight
     const pcAddr = props.pc & 0xFFFF;
     const pcX = (pcAddr % bytesPerRow) * sx;
     const pcY = Math.floor(pcAddr / bytesPerRow) * sy;
@@ -379,7 +387,7 @@ function paintOverlays(ctx: CanvasRenderingContext2D, hmW: number, hmH: number) 
     ctx.fillStyle = '#6cf';
     ctx.fillRect(pcX - 1.5, pcY + pcH / 2 - 1.5, 3, 3);
 
-    // ── SP highlight row + dot ──
+    // MARK: SP highlight
     const spAddr = props.sp & 0xFFFF;
     const spX = (spAddr % bytesPerRow) * sx;
     const spY = Math.floor(spAddr / bytesPerRow) * sy;
@@ -419,8 +427,15 @@ watch(minimapSize, () => {
     paintMinimap();
 });
 
-// ── Lifecycle ──
+// MARK: Dumping
+function dump() {
+    const blob = new Blob([props.memory as Uint8Array<ArrayBuffer>]);
+    const download = URL.createObjectURL(blob);
+    window.open(download);
+    URL.revokeObjectURL(download);
+}
 
+// MARK: Lifecycle
 onMounted(() => {
     measureRowHeight();
     const el = hexContainer.value;
@@ -447,15 +462,31 @@ onUnmounted(() => {
     user-select: none;
 }
 
-// ── Toolbar ──
+// MARK: Toolbar
 
 .mem-toolbar {
     display: flex;
     align-items: center;
-    gap: 0.3rem;
+    justify-content: space-between;
     margin-bottom: 0.4rem;
-    flex-wrap: wrap;
+
+    >* {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        flex-wrap: wrap;
+    }
 }
+
+.clear-btn {
+    margin-left: 0.5rem;
+
+    &:hover:not(:disabled) {
+        color: var(--error);
+        border-color: var(--error);
+    }
+}
+
 
 .jump-label {
     font-family: var(--mono);
@@ -509,7 +540,7 @@ onUnmounted(() => {
     }
 }
 
-// ── Layout body ──
+// MARK: Layout body
 
 .mem-body {
     display: flex;
@@ -518,7 +549,7 @@ onUnmounted(() => {
     min-width: 0;
 }
 
-// ── Hex rows ──
+// MARK: Hex rows
 
 .hex-container {
     flex-shrink: 0;
@@ -647,7 +678,7 @@ onUnmounted(() => {
     line-height: 1rem;
 }
 
-// ── Minimap ──
+// MARK: Minimap
 
 .minimap-wrap {
     flex: 1;

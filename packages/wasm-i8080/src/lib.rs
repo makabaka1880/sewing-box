@@ -25,7 +25,6 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 pub struct I8080Wasm {
     inner: I8080,
-    halted: bool,
 }
 
 #[wasm_bindgen]
@@ -34,25 +33,17 @@ impl I8080Wasm {
     pub fn new(src: &str, io_bus: Vec<u8>, pc: u16, sp: u16) -> Result<I8080Wasm, JsValue> {
         let blocks = parse(src).map_err(|e| JsValue::from_str(&e))?;
         let inner = I8080::assemble(blocks, io_bus, pc, sp).map_err(|e| JsValue::from_str(&e))?;
-        Ok(I8080Wasm {
-            inner,
-            halted: false,
-        })
+        Ok(I8080Wasm { inner })
     }
 
     #[wasm_bindgen]
     pub fn step(&mut self) -> Result<bool, JsValue> {
-        if self.halted {
-            return Ok(true);
-        }
-        let halted = self.inner.step().map_err(|e| JsValue::from_str(&e))?;
-        self.halted = halted;
-        Ok(halted)
+        Ok(self.inner.step().map_err(|e| JsValue::from_str(&e))?)
     }
 
     #[wasm_bindgen]
     pub fn state(&self) -> JsValue {
-        serde_wasm_bindgen::to_value(&self.inner.state(self.halted)).unwrap_or(JsValue::UNDEFINED)
+        serde_wasm_bindgen::to_value(&self.inner.state()).unwrap_or(JsValue::UNDEFINED)
     }
 
     #[wasm_bindgen]
@@ -149,5 +140,10 @@ impl I8080Wasm {
     #[wasm_bindgen]
     pub fn get_memory_ptr(&self) -> *const u8 {
         self.inner.mem.as_ptr()
+    }
+
+    #[wasm_bindgen]
+    pub fn clear_ram(&mut self) {
+        self.inner.mem.fill(0);
     }
 }

@@ -13,8 +13,10 @@
 
         <template #editor-tools>
             <button class="secondary" title="Assemble" @click="doAssemble">ASSEMBLE &#9874; </button>
-            <button class="primary" title="Step" @click="doStep" :disabled="!program || halted || running">STEP &#x2192;</button>
-            <button v-if="!running" class="secondary" title="Run" @click="doRun" :disabled="!program || halted">RUN &#x21D3;</button>
+            <button class="primary" title="Step" @click="doStep" :disabled="!program || halted || running">STEP
+                &#x2192;</button>
+            <button v-if="!running" class="secondary" title="Run" @click="doRun" :disabled="!program || halted">RUN
+                &#x21D3;</button>
             <button v-else class="secondary" title="Stop" @click="doStop">STOP &#x25A0;</button>
         </template>
 
@@ -29,7 +31,7 @@
                     <span class="toggle-arrow" :class="{ open: memOpen }">&#x25B8;</span>
                 </button>
                 <div v-show="memOpen" class="config-body">
-                    <MemView :memory="memory" :pc="pc" :sp="sp" @edit-byte="onMemEdit" />
+                    <MemView :memory="memory" :pc="pc" :sp="sp" @edit-byte="onMemEdit" @clear-mem="onClearMem" />
                 </div>
             </section>
         </template>
@@ -43,11 +45,21 @@
         <template #result>
             <div class="result-wrapper">
                 <section class="result">
-                    <RegsCard :values="regs" :pc="pc" :sp="sp" :int-enabled="intEnabled"
-                        @update:pc="onPcChange" @update:sp="onSpChange" @update:reg="onRegChange"
-                        @update:int-enabled="onIntEnabledChange" />
-                    <div v-if="curAsm" class="cur-asm">{{ curAsm }}</div>
-                    <div v-if="curBytes" class="cur-bytes"><span class="bytes-addr">{{ curBytesAddr }}</span> {{ curBytes }}</div>
+                    <div class="state-display">
+                        <RegsCard :values="regs" :pc="pc" :sp="sp" :int-enabled="intEnabled" @update:pc="onPcChange"
+                            @update:sp="onSpChange" @update:reg="onRegChange" @update:int-enabled="onIntEnabledChange"
+                            class="reg-cards" />
+                        <div class="stack-trace-container">
+                            <div class="trace-stack">
+                                <!-- <div v-if="curAsm" class="cur-asm">{{ curAsm }}</div>
+                        <div v-if="curBytes" class="cur-bytes"><span class="bytes-addr">{{ curBytesAddr }}</span> {{
+                            curBytes }}</div> -->
+                                <span v-if="instrHistory.length == 0" class="empty-msg">No instructions executed
+                                    yet.</span>
+                                <InstrHistoryRow v-for="entry in revHistory" :instr="entry" />
+                            </div>
+                        </div>
+                    </div>
                     <div v-if="halted" class="halted-msg">Program halted.</div>
                     <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
                 </section>
@@ -67,7 +79,7 @@
 </template>
 
 <script lang="ts" setup>
-import { inject, shallowRef, ref, watch, onUnmounted } from 'vue';
+import { inject, shallowRef, ref, watch, onUnmounted, computed } from 'vue';
 import { getLang, getGrammar, generateEBNF, getSample } from '@/cfg/langs';
 import { useEditorStore } from '@/stores/editor';
 import PlaygroundLayout from '@/components/PlaygroundLayout.vue';
@@ -76,6 +88,13 @@ import IoGrid, { type HistoryEntry } from '@/components/Lite80/IoGrid.vue';
 import RegsCard from '@/components/Lite80/RegsCard.vue';
 import { I8080Wasm } from "@sewing-box/wasm-i8080";
 import MemView from '@/components/Lite80/MemView.vue';
+import InstrHistoryRow from '@/components/Lite80/InstrHistoryRow.vue';
+
+export interface InstrHistoryEntry {
+    disasm: string,
+    bytes: string,
+    addr: string
+}
 
 const store = useEditorStore();
 const grammarModal = inject<{ show: boolean; content: string }>('grammarModal')!;
@@ -99,9 +118,16 @@ const steps = ref(0);
 const halted = ref(false);
 const running = ref(false);
 let runTimer: ReturnType<typeof setInterval> | null = null;
+
 const curAsm = ref('');
 const curBytes = ref('');
 const curBytesAddr = ref('');
+
+const instrHistory = ref<InstrHistoryEntry[]>([]);
+const revHistory = computed(() => {
+    return instrHistory.value.reverse()
+})
+
 const portHistory = ref<Record<number, HistoryEntry[]>>({});
 const MAX_HISTORY = 40;
 const memory = shallowRef<Uint8Array>(new Uint8Array(65536));
@@ -148,9 +174,14 @@ function onMemEdit(addr: number, value: number) {
     memory.value = program.value.memory_slice(0, 0x10000);
 }
 
+function onLoadMem() {
+
+}
+
 function onPcChange(val: number) {
     pc.value = val;
     program.value?.set_pc(val);
+    instrHistory.value = [];
     halted.value = false;
     errorMsg.value = '';
     syncAsm();
@@ -184,6 +215,16 @@ function doAssemble() {
         program.value = null;
         errorMsg.value = String(e);
     }
+    stopRunning()
+    instrHistory.value = []
+}
+
+function onClearMem() {
+    program.value?.clear_ram()
+    instrHistory.value = []
+    syncAsm()
+    syncMemory()
+    syncState()
 }
 
 function doStep() {
@@ -202,6 +243,12 @@ function doStep() {
             }
         }
         syncState();
+        instrHistory.value!.push({
+            disasm: curAsm.value,
+            bytes: curBytes.value,
+            addr: curBytesAddr.value,
+        });
+        console.log(`hi ${program.value.pc()} ${program.value.memory_slice(program.value.pc(), program.value.pc() + 10)} ${done}`)
         if (done) halted.value = true;
     } catch (e) {
         errorMsg.value = String(e);
@@ -226,6 +273,11 @@ function runOneStep(): boolean {
             }
         }
         syncState();
+        instrHistory.value!.push({
+            disasm: curAsm.value,
+            bytes: curBytes.value,
+            addr: curBytesAddr.value,
+        });
         if (done) {
             halted.value = true;
             stopRunning();
@@ -246,7 +298,7 @@ function doRun() {
     running.value = true;
     runTimer = setInterval(() => {
         runOneStep();
-    }, 10); // ~100 steps/second
+    }, 5); // ~100 steps/second
 }
 
 function doStop() {
@@ -328,6 +380,7 @@ onUnmounted(() => {
     font-size: 0.85rem;
 }
 
+/*
 .cur-asm {
     font-family: var(--mono);
     font-size: 0.65rem;
@@ -346,6 +399,44 @@ onUnmounted(() => {
 .bytes-addr {
     font-weight: 700;
     color: var(--accent);
+}
+*/
+
+.state-display {
+    display: flex;
+    gap: 1rem;
+    height: 100%;
+
+    .reg-cards {
+        // width: 100%;
+        flex: 1;
+    }
+
+    .stack-trace-container {
+        flex: 1;
+        min-height: 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        max-height: 20vh;
+        padding: .5rem;
+        border: 1px var(--border) solid;
+        border-radius: 5px;
+    }
+
+    .trace-stack {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .empty-msg {
+        color: var(--text-muted);
+        font-size: 0.65rem;
+        font-family: var(--mono);
+        margin-bottom: 0.35rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
 }
 
 .halted-msg {

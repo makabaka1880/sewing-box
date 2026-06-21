@@ -6,20 +6,25 @@
                     <span class="reg-name">A</span>
                     <span v-if="editing !== 7" class="reg-val">{{ fmtHex(values[7] ?? 0, 2) }}</span>
                     <input v-else ref="editInputs" class="reg-input" :value="editText" maxlength="2" spellcheck="false"
-                        @input="onInput" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" @blur="commitEdit" />
+                        @input="onInput" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit"
+                        @blur="commitEdit" />
                 </div>
                 <div v-for="pair in pairs" :key="pair.hi" class="reg-pair">
                     <div class="reg-cell" :class="{ editing: editing === pair.hiCode }" @click="beginEdit(pair.hiCode)">
                         <span class="reg-name">{{ pair.hi }}</span>
-                        <span v-if="editing !== pair.hiCode" class="reg-val">{{ fmtHex(values[pair.hiCode] ?? 0, 2) }}</span>
-                        <input v-else ref="editInputs" class="reg-input" :value="editText" maxlength="2" spellcheck="false"
-                            @input="onInput" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" @blur="commitEdit" />
+                        <span v-if="editing !== pair.hiCode" class="reg-val">{{ fmtHex(values[pair.hiCode] ?? 0, 2)
+                            }}</span>
+                        <input v-else ref="editInputs" class="reg-input" :value="editText" maxlength="2"
+                            spellcheck="false" @input="onInput" @keydown.enter.prevent="commitEdit"
+                            @keydown.escape="cancelEdit" @blur="commitEdit" />
                     </div>
                     <div class="reg-cell" :class="{ editing: editing === pair.loCode }" @click="beginEdit(pair.loCode)">
                         <span class="reg-name">{{ pair.lo }}</span>
-                        <span v-if="editing !== pair.loCode" class="reg-val">{{ fmtHex(values[pair.loCode] ?? 0, 2) }}</span>
-                        <input v-else ref="editInputs" class="reg-input" :value="editText" maxlength="2" spellcheck="false"
-                            @input="onInput" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" @blur="commitEdit" />
+                        <span v-if="editing !== pair.loCode" class="reg-val">{{ fmtHex(values[pair.loCode] ?? 0, 2)
+                            }}</span>
+                        <input v-else ref="editInputs" class="reg-input" :value="editText" maxlength="2"
+                            spellcheck="false" @input="onInput" @keydown.enter.prevent="commitEdit"
+                            @keydown.escape="cancelEdit" @blur="commitEdit" />
                     </div>
                 </div>
             </div>
@@ -44,7 +49,7 @@
                 <button class="ptr-step" @click="emit('update:pc', (pc - 1) & 0xFFFF)">−</button>
                 <span class="ptr-label">PC</span>
                 <span v-if="editing !== 'pc'" class="ptr-val clickable" @click="beginEdit('pc', pc)">{{ fmtHex(pc, 4)
-                }}</span>
+                    }}</span>
                 <input v-else ref="editInputPc" class="ptr-input" :value="editText" maxlength="4" spellcheck="false"
                     @input="onInputWide" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" />
                 <button class="ptr-step right" @click="emit('update:pc', (pc + 1) & 0xFFFF)">+</button>
@@ -53,7 +58,7 @@
                 <button class="ptr-step" @click="emit('update:sp', (sp - 1) & 0xFFFF)">−</button>
                 <span class="ptr-label">SP</span>
                 <span v-if="editing !== 'sp'" class="ptr-val clickable" @click="beginEdit('sp', sp)">{{ fmtHex(sp, 4)
-                }}</span>
+                    }}</span>
                 <input v-else ref="editInputSp" class="ptr-input" :value="editText" maxlength="4" spellcheck="false"
                     @input="onInputWide" @keydown.enter.prevent="commitEdit" @keydown.escape="cancelEdit" />
                 <button class="ptr-step right" @click="emit('update:sp', (sp + 1) & 0xFFFF)">+</button>
@@ -378,7 +383,6 @@ function commitEdit() {
     outline: none;
     color: var(--accent);
     font-family: var(--mono);
-    font-size: 0.7rem;
     width: 100%;
     padding: 0;
 }

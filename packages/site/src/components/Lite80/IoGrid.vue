@@ -208,8 +208,8 @@ function commitEdit() {
     margin-left: 0.5rem;
 
     &:hover:not(:disabled) {
-        color: #e0556a;
-        border-color: #e0556a;
+        color: var(--error);
+        border-color: var(--error);
     }
 }
 
