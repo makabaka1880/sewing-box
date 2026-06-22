@@ -102,7 +102,7 @@ export const profiles: LangProfile[] = [
             },
         ],
         sample: `(block 0100h
-    (lxi H 0400h)
+    (lxi HL 0400h)
     (call 0200h)
     (hlt))
 
@@ -111,7 +111,7 @@ export const profiles: LangProfile[] = [
     (cpi 00h)
     (jz 0300h)
     (out 01h)
-    (inx h)
+    (inx HL)
     (jmp 0200h))
 
 (block 0300h

@@ -195,9 +195,9 @@ fn parse_reg(sexp: &Sexp) -> Result<u8, String> {
 fn parse_rp(sexp: &Sexp) -> Result<u8, String> {
     let s = expect_symbol(sexp)?;
     match s.to_uppercase().as_str() {
-        "B" => Ok(0), // BC
-        "D" => Ok(1), // DE
-        "H" => Ok(2), // HL
+        "BC" => Ok(0), // BC
+        "DE" => Ok(1), // DE
+        "HL" => Ok(2), // HL
         "SP" => Ok(3),
         "PSW" => Ok(3),
         _ => Err(format!("Unknown register pair: '{}'", s)),
