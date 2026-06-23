@@ -56,7 +56,7 @@
                             curBytes }}</div> -->
                                 <span v-if="instrHistory.length == 0" class="empty-msg">No instructions executed
                                     yet.</span>
-                                <InstrHistoryRow v-for="entry in revHistory" :instr="entry" />
+                                <InstrHistoryRow v-for="entry in instrHistory" :instr="entry" />
                             </div>
                         </div>
                     </div>
@@ -124,9 +124,6 @@ const curBytes = ref('');
 const curBytesAddr = ref('');
 
 const instrHistory = ref<InstrHistoryEntry[]>([]);
-const revHistory = computed(() => {
-    return instrHistory.value.reverse()
-})
 
 const portHistory = ref<Record<number, HistoryEntry[]>>({});
 const MAX_HISTORY = 40;
